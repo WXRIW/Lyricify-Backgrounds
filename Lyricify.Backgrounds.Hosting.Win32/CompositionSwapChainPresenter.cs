@@ -1,4 +1,3 @@
-using System;
 using Vortice.Direct3D11;
 using Vortice.DirectComposition;
 using Vortice.DXGI;

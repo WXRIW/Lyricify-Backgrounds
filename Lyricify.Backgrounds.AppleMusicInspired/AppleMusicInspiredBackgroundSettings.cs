@@ -1,5 +1,3 @@
-using Lyricify.Backgrounds;
-
 namespace Lyricify.Backgrounds.AppleMusicInspired
 {
     public sealed class AppleMusicInspiredBackgroundSettings : IBackgroundSettings

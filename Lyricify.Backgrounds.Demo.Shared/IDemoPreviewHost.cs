@@ -1,5 +1,3 @@
-using Lyricify.Backgrounds.AppleMusicInspired;
-
 namespace Lyricify.Backgrounds.Demo.Shared;
 
 public interface IDemoPreviewHost : IDisposable

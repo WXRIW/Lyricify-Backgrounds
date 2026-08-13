@@ -1,5 +1,4 @@
 using Microsoft.UI.Xaml.Controls;
-using SharpGen.Runtime;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D11;

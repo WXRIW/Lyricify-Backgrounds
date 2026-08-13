@@ -1,17 +1,11 @@
-using Lyricify.Backgrounds;
-using Lyricify.Backgrounds.AppleMusicInspired;
 using Lyricify.Backgrounds.AppleMusicInspired.Rendering;
 using SharpGen.Runtime;
-using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;

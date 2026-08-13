@@ -1,4 +1,3 @@
-using Lyricify.Backgrounds;
 using Lyricify.Backgrounds.AppleMusicInspired;
 using Lyricify.Backgrounds.Demo.Shared;
 using Microsoft.UI.Windowing;

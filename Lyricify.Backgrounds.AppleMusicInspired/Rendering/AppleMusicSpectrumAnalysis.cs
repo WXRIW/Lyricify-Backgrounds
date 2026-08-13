@@ -1,12 +1,8 @@
 using NAudio.CoreAudioApi;
 using NAudio.Dsp;
 using NAudio.Wave;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using NAudioComplex = NAudio.Dsp.Complex;
 
 #nullable disable
