@@ -1,0 +1,91 @@
+<Window x:Class="Lyricify.Backgrounds.Demo.WinUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid x:Name="RootLayout" Background="#FF0E1015" RequestedTheme="Dark">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="390" />
+        </Grid.ColumnDefinitions>
+
+        <Border Margin="16,16,0,16" CornerRadius="16" Background="Black"
+                BorderBrush="#33FFFFFF" BorderThickness="1">
+            <Grid x:Name="PreviewHost" />
+        </Border>
+
+        <Border Grid.Column="2" Margin="0,16,16,16" CornerRadius="16"
+                Background="#FF1A1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
+                Padding="24,20">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,-16,0">
+                <StackPanel Spacing="10" Margin="0,0,16,0">
+                    <TextBlock Text="Background lab" FontSize="26" FontWeight="SemiBold" Foreground="White" />
+                    <TextBlock Text="The native renderer hosted inside a WinUI shell."
+                               Foreground="#BFFFFFFF" Margin="0,-4,0,10" />
+
+                    <TextBlock Text="ARTWORK" FontSize="12" FontWeight="SemiBold" Foreground="#FFB6C8FF" Margin="0,8,0,0" />
+                    <TextBox x:Name="ArtworkUrlBox" Text="{x:Bind ViewModel.ArtworkUrl, Mode=TwoWay}"
+                             PlaceholderText="Paste an image URL" />
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Button Content="Load URL" Click="LoadUrl_Click" HorizontalAlignment="Stretch" />
+                        <Button Grid.Column="1" Content="Open file" Click="OpenFile_Click" HorizontalAlignment="Stretch" />
+                    </Grid>
+
+                    <TextBlock Text="PLAYBACK &amp; LAYOUT" FontSize="12" FontWeight="SemiBold" Foreground="#FFB6C8FF" Margin="0,10,0,0" />
+                    <ComboBox Header="Background preset" ItemsSource="{x:Bind ViewModel.PresetOptions}"
+                              SelectedIndex="{x:Bind ViewModel.SelectedPresetIndex, Mode=TwoWay}" />
+                    <Grid ColumnSpacing="12" RowSpacing="6">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                        <ToggleSwitch Header="Playing" Foreground="White" IsOn="{x:Bind ViewModel.IsPlaying, Mode=TwoWay}" />
+                        <ToggleSwitch Grid.Column="1" Header="Vertical layout" Foreground="White" IsOn="{x:Bind ViewModel.IsVertical, Mode=TwoWay}" />
+                        <ToggleSwitch Grid.Row="1" Header="Light theme" Foreground="White" IsOn="{x:Bind ViewModel.IsLightTheme, Mode=TwoWay}" />
+                        <ToggleSwitch Grid.Row="1" Grid.Column="1" Header="Lyrics mode"
+                                      Foreground="White"
+                                      IsOn="{x:Bind ViewModel.IsBehindLyrics, Mode=TwoWay}" />
+                    </Grid>
+
+                    <TextBlock Text="RENDERING" FontSize="12" FontWeight="SemiBold" Foreground="#FFB6C8FF" Margin="0,10,0,0" />
+                    <Grid RowSpacing="7">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition/><ColumnDefinition Width="58"/></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                        <TextBlock Text="Frame rate" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Column="1" Minimum="-1" Maximum="120" StepFrequency="1" Value="{x:Bind ViewModel.FrameRateLimit, Mode=TwoWay}" />
+                        <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.FrameRateLimit, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="1" Text="Render scale" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="1" Grid.Column="1" Minimum="0.125" Maximum="1" StepFrequency="0.025" Value="{x:Bind ViewModel.RenderScale, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{x:Bind ViewModel.RenderScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="2" Text="Bass pulse" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="10" StepFrequency="0.1" Value="{x:Bind ViewModel.BassPulseScale, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{x:Bind ViewModel.BassPulseScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="3" Text="Blur scale" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="10" StepFrequency="0.1" Value="{x:Bind ViewModel.BlurScale, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{x:Bind ViewModel.BlurScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                    </Grid>
+
+                    <TextBlock Text="MESH" FontSize="12" FontWeight="SemiBold" Foreground="#FFB6C8FF" Margin="0,10,0,0" />
+                    <Grid RowSpacing="7">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="148"/><ColumnDefinition/><ColumnDefinition Width="58"/></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                        <TextBlock Text="Portrait points" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Column="1" Minimum="-1" Maximum="16" StepFrequency="1" Value="{x:Bind ViewModel.PortraitControlPointCount, Mode=TwoWay}" />
+                        <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.PortraitControlPointCount, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="1" Text="Portrait subdivisions" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="1" Grid.Column="1" Minimum="-1" Maximum="4" StepFrequency="1" Value="{x:Bind ViewModel.PortraitSubdivisionLevels, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{x:Bind ViewModel.PortraitSubdivisionLevels, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="2" Text="Landscape points" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="-1" Maximum="16" StepFrequency="1" Value="{x:Bind ViewModel.LandscapeControlPointCount, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{x:Bind ViewModel.LandscapeControlPointCount, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="3" Text="Landscape subdivisions" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="3" Grid.Column="1" Minimum="-1" Maximum="4" StepFrequency="1" Value="{x:Bind ViewModel.LandscapeSubdivisionLevels, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{x:Bind ViewModel.LandscapeSubdivisionLevels, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                    </Grid>
+
+                    <Button Content="Reset defaults" Click="Reset_Click" Margin="0,12,0,0" HorizontalAlignment="Stretch" />
+                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                             Message="{x:Bind ViewModel.Status, Mode=OneWay}" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

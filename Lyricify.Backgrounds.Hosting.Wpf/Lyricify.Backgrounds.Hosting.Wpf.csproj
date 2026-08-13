@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <IsPackable>true</IsPackable>
+    <PackageId>Lyricify.Backgrounds.Hosting.Wpf</PackageId>
+    <Description>Reusable WPF STA-thread and HwndSource hosting for independent Lyricify backgrounds.</Description>
+    <Authors>XY Wang</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Lyricify.Backgrounds.Hosting.Win32\Lyricify.Backgrounds.Hosting.Win32.csproj" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.2.0" />
+  </ItemGroup>
+</Project>
