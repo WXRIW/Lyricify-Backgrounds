@@ -17,6 +17,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         private Bitmap? artworkBitmap;
         private bool isVertical;
         private bool isPlaying;
+        private bool isBehindLyrics = true;
         private bool isReady;
         private bool disposed;
 
@@ -78,6 +79,17 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             Post(new BackgroundMessage { Kind = MessageKind.Playback, IsPlaying = playing });
         }
 
+        public void SetIsBehindLyrics(bool behindLyrics)
+        {
+            if (isBehindLyrics == behindLyrics) return;
+            isBehindLyrics = behindLyrics;
+            Post(new BackgroundMessage
+            {
+                Kind = MessageKind.BehindLyrics,
+                IsBehindLyrics = behindLyrics,
+            });
+        }
+
         public void UpdateState(BackgroundState state)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
@@ -113,6 +125,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 LightTheme = lightTheme,
                 IsVertical = isVertical,
                 IsPlaying = isPlaying,
+                IsBehindLyrics = isBehindLyrics,
                 ArtworkUrl = artworkUrl,
                 TrackId = trackId,
                 ArtworkBitmap = artworkBitmap == null ? null : new Bitmap(artworkBitmap),
@@ -159,7 +172,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             renderHost = null;
         }
 
-        private enum MessageKind { Initialize, Artwork, Layout, Playback }
+        private enum MessageKind { Initialize, Artwork, Layout, Playback, BehindLyrics }
 
         private sealed class BackgroundMessage : IDisposable
         {
@@ -168,6 +181,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             public bool LightTheme { get; set; }
             public bool IsVertical { get; set; }
             public bool IsPlaying { get; set; }
+            public bool IsBehindLyrics { get; set; } = true;
             public string? ArtworkUrl { get; set; }
             public string TrackId { get; set; } = string.Empty;
             public Bitmap? ArtworkBitmap { get; set; }
@@ -203,7 +217,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     latencyProvider,
                     artworkLoader);
                 renderer.SetVerticalLayout(initial.IsVertical, false);
-                renderer.SetIsBehindLyrics(true);
+                renderer.SetIsBehindLyrics(initial.IsBehindLyrics);
                 renderer.SetPresentationVisible(true);
                 ApplyArtwork(initial);
             }
@@ -217,6 +231,9 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     case MessageKind.Artwork: ApplyArtwork(message); break;
                     case MessageKind.Layout: renderer.SetVerticalLayout(message.IsVertical); break;
                     case MessageKind.Playback: isPlaying = message.IsPlaying; break;
+                    case MessageKind.BehindLyrics:
+                        renderer.SetIsBehindLyrics(message.IsBehindLyrics);
+                        break;
                 }
             }
 
