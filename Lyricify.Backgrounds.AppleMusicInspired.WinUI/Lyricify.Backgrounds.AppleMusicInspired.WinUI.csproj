@@ -16,7 +16,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lyricify.Backgrounds\Lyricify.Backgrounds.csproj" />
-    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired\Lyricify.Backgrounds.AppleMusicInspired.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Windows\Lyricify.Backgrounds.AppleMusicInspired.Windows.csproj" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
     <PackageReference Include="SharpGen.Runtime" Version="2.4.2-beta" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.2.0" />

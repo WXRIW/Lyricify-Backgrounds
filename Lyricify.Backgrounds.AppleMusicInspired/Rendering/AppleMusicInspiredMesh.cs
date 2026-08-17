@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -36,9 +37,14 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
             return ResolvePortraitPreset(SelectPresetSlot());
         }
 
+        private static readonly Random PresetRandom = new Random();
+
         public static int SelectPresetSlot()
         {
-            return Random.Shared.Next(PresetSlotCount);
+            lock (PresetRandom)
+            {
+                return PresetRandom.Next(PresetSlotCount);
+            }
         }
 
         public static int ResolvePortraitPreset(int presetSlot)
@@ -282,7 +288,17 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
             return result;
         }
 
-        private readonly record struct MeshPreset(Vector2[] From, Vector2[] To);
+        private readonly struct MeshPreset
+        {
+            public MeshPreset(Vector2[] from, Vector2[] to)
+            {
+                From = from;
+                To = to;
+            }
+
+            public Vector2[] From { get; }
+            public Vector2[] To { get; }
+        }
 
         private static readonly Vector2[] Preset0From =
         [
