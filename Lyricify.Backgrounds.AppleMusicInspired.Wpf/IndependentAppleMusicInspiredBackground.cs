@@ -11,6 +11,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         private readonly bool lightTheme;
         private readonly Func<int>? deviceLatencyProvider;
         private readonly Func<string, Task<Bitmap>>? artworkLoader;
+        private readonly Func<string?>? audioEndpointIdProvider;
         private IndependentWpfBackgroundHost<BackgroundMessage>? renderHost;
         private string? artworkUrl;
         private string trackId = string.Empty;
@@ -25,12 +26,14 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             AppleMusicInspiredBackgroundSettings? settings = null,
             bool lightTheme = false,
             Func<int>? deviceLatencyProvider = null,
-            Func<string, Task<Bitmap>>? artworkLoader = null)
+            Func<string, Task<Bitmap>>? artworkLoader = null,
+            Func<string?>? audioEndpointIdProvider = null)
         {
             this.settings = settings?.Clone() ?? new AppleMusicInspiredBackgroundSettings();
             this.lightTheme = lightTheme;
             this.deviceLatencyProvider = deviceLatencyProvider;
             this.artworkLoader = artworkLoader;
+            this.audioEndpointIdProvider = audioEndpointIdProvider;
             IsHitTestVisible = false;
             Loaded += OnLoaded;
             Unloaded += (_, _) => Dispose();
@@ -77,6 +80,11 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             if (isPlaying == playing) return;
             isPlaying = playing;
             Post(new BackgroundMessage { Kind = MessageKind.Playback, IsPlaying = playing });
+        }
+
+        public void RefreshAudioEndpoint()
+        {
+            Post(new BackgroundMessage { Kind = MessageKind.AudioEndpoint });
         }
 
         public void SetIsBehindLyrics(bool behindLyrics)
@@ -137,7 +145,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     context,
                     message,
                     deviceLatencyProvider,
-                    artworkLoader),
+                    artworkLoader,
+                    audioEndpointIdProvider),
                 message => message.Dispose(),
                 () => Dispatcher.BeginInvoke(new Action(() =>
                 {
@@ -172,7 +181,15 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             renderHost = null;
         }
 
-        private enum MessageKind { Initialize, Artwork, Layout, Playback, BehindLyrics }
+        private enum MessageKind
+        {
+            Initialize,
+            Artwork,
+            Layout,
+            Playback,
+            BehindLyrics,
+            AudioEndpoint,
+        }
 
         private sealed class BackgroundMessage : IDisposable
         {
@@ -205,7 +222,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 IndependentWpfBackgroundContext context,
                 BackgroundMessage initial,
                 Func<int>? latencyProvider,
-                Func<string, Task<Bitmap>>? artworkLoader)
+                Func<string, Task<Bitmap>>? artworkLoader,
+                Func<string?>? audioEndpointIdProvider)
             {
                 isPlaying = initial.IsPlaying;
                 renderer = new AppleMusicInspiredBackground(
@@ -215,7 +233,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     context.WindowHandle,
                     context.FirstFramePresented,
                     latencyProvider,
-                    artworkLoader);
+                    artworkLoader,
+                    audioEndpointIdProvider: audioEndpointIdProvider);
                 renderer.SetVerticalLayout(initial.IsVertical, false);
                 renderer.SetIsBehindLyrics(initial.IsBehindLyrics);
                 renderer.SetPresentationVisible(true);
@@ -233,6 +252,9 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     case MessageKind.Playback: isPlaying = message.IsPlaying; break;
                     case MessageKind.BehindLyrics:
                         renderer.SetIsBehindLyrics(message.IsBehindLyrics);
+                        break;
+                    case MessageKind.AudioEndpoint:
+                        renderer.RefreshAudioEndpoint();
                         break;
                 }
             }

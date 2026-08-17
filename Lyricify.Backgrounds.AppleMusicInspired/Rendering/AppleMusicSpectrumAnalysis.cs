@@ -109,10 +109,14 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
         private BassFeatureState _transientFeatureState;
 
         private readonly Func<int> _deviceLatencyProvider;
+        private readonly Func<string> _audioEndpointIdProvider;
 
-        public AppleMusicSpectrumAnalysis(Func<int> deviceLatencyProvider = null)
+        public AppleMusicSpectrumAnalysis(
+            Func<int> deviceLatencyProvider = null,
+            Func<string> audioEndpointIdProvider = null)
         {
             _deviceLatencyProvider = deviceLatencyProvider ?? (() => 0);
+            _audioEndpointIdProvider = audioEndpointIdProvider;
             FillHannWindow(_hannWindow);
             FillHannWindow(_fastHannWindow);
         }
@@ -185,7 +189,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
             try
             {
                 _deviceEnumerator = new MMDeviceEnumerator();
-                _endpointNotificationClient = new EndpointNotificationClient(RestartCapture);
+                _endpointNotificationClient = new EndpointNotificationClient(
+                    OnDefaultRenderDeviceChanged);
                 _deviceEnumerator.RegisterEndpointNotificationCallback(
                     _endpointNotificationClient);
             }
@@ -257,6 +262,43 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
 
             ResetAnalysis();
             TryStartCapture(generation);
+        }
+
+        /// <summary>
+        /// Reopens loopback capture using the endpoint currently returned by
+        /// the configured endpoint provider. A null or blank endpoint ID
+        /// selects the default multimedia render endpoint.
+        /// </summary>
+        public void RefreshAudioEndpoint()
+        {
+            RestartCapture();
+        }
+
+        private void OnDefaultRenderDeviceChanged()
+        {
+            if (GetRequestedAudioEndpointId() == null)
+            {
+                RestartCapture();
+            }
+        }
+
+        private string GetRequestedAudioEndpointId()
+        {
+            if (_audioEndpointIdProvider == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                string endpointId = _audioEndpointIdProvider();
+                return string.IsNullOrWhiteSpace(endpointId) ? null : endpointId;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return null;
+            }
         }
 
         public Vector4 GetImageScales(bool isPlaying, float pulseScale = 1f)
@@ -351,7 +393,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
             LowLatencyLoopbackCapture capture = null;
             try
             {
-                capture = new LowLatencyLoopbackCapture();
+                capture = new LowLatencyLoopbackCapture(GetRequestedAudioEndpointId());
                 capture.DataAvailable += OnDataAvailable;
                 capture.RecordingStopped += OnRecordingStopped;
 
@@ -981,9 +1023,20 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
         {
             private readonly MMDevice _endpoint;
 
-            public LowLatencyLoopbackCapture()
-                : this(WasapiLoopbackCapture.GetDefaultLoopbackCaptureDevice())
+            public LowLatencyLoopbackCapture(string endpointId)
+                : this(GetCaptureDevice(endpointId))
             {
+            }
+
+            private static MMDevice GetCaptureDevice(string endpointId)
+            {
+                if (string.IsNullOrWhiteSpace(endpointId))
+                {
+                    return WasapiLoopbackCapture.GetDefaultLoopbackCaptureDevice();
+                }
+
+                using var enumerator = new MMDeviceEnumerator();
+                return enumerator.GetDevice(endpointId);
             }
 
             private LowLatencyLoopbackCapture(MMDevice endpoint)

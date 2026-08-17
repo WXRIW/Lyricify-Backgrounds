@@ -130,14 +130,17 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             Action firstCompositionFramePresented = null,
             Func<int> deviceLatencyProvider = null,
             Func<string, Task<Bitmap>> artworkLoader = null,
-            int presetSlot = -1)
+            int presetSlot = -1,
+            Func<string> audioEndpointIdProvider = null)
         {
             _settings = settings ?? new();
             _isPlayingProvider = isPlayingProvider;
             _compositionWindowHandle = compositionWindowHandle;
             _firstCompositionFramePresented = firstCompositionFramePresented;
             _artworkLoader = artworkLoader;
-            _spectrumAnalysis = new AppleMusicSpectrumAnalysis(deviceLatencyProvider);
+            _spectrumAnalysis = new AppleMusicSpectrumAnalysis(
+                deviceLatencyProvider,
+                audioEndpointIdProvider);
             if (presetSlot < 0)
             {
                 PresetIndex = AppleMusicInspiredMesh.SelectPreset();
@@ -308,6 +311,15 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             {
                 UnhookRendering();
             }
+        }
+
+        /// <summary>
+        /// Reopens audio capture using the endpoint currently returned by the
+        /// endpoint provider supplied to the constructor.
+        /// </summary>
+        public void RefreshAudioEndpoint()
+        {
+            _spectrumAnalysis.RefreshAudioEndpoint();
         }
 
         /// <summary>

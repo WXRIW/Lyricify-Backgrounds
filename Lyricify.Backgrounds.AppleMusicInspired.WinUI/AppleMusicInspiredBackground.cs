@@ -12,6 +12,7 @@ public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
 {
     private readonly SwapChainPanel panel = new();
     private readonly AppleMusicInspiredBackgroundSettings settings;
+    private readonly Func<string?>? audioEndpointIdProvider;
     private BackgroundState state = new() { IsVisible = true, IsPlaying = true };
     private SwapChainPanelPresenter? presenter;
     private AppleMusicInspiredRenderer? renderer;
@@ -22,10 +23,12 @@ public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
 
     public AppleMusicInspiredBackground(
         AppleMusicInspiredBackgroundSettings? settings = null,
-        int presetSlot = -1)
+        int presetSlot = -1,
+        Func<string?>? audioEndpointIdProvider = null)
     {
         this.settings = settings?.Clone() ?? new AppleMusicInspiredBackgroundSettings();
         this.presetSlot = presetSlot;
+        this.audioEndpointIdProvider = audioEndpointIdProvider;
         Background = new SolidColorBrush(Microsoft.UI.Colors.Black);
         IsHitTestVisible = false;
         Children.Add(panel);
@@ -67,6 +70,11 @@ public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
         if (presetSlot == value) return;
         presetSlot = value;
         if (IsLoaded) RecreateRenderer();
+    }
+
+    public void RefreshAudioEndpoint()
+    {
+        renderer?.RefreshAudioEndpoint();
     }
 
     public void UpdateState(BackgroundState value)
@@ -130,7 +138,8 @@ public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
             () => state.IsPlaying,
             presenter,
             RaiseFirstFrame,
-            presetSlot: presetSlot);
+            presetSlot: presetSlot,
+            audioEndpointIdProvider: audioEndpointIdProvider);
         renderer.SetVerticalLayout(state.IsVertical, false);
         renderer.SetIsBehindLyrics(state.IsBehindLyrics);
         renderer.SetPresentationVisible(state.IsVisible);
