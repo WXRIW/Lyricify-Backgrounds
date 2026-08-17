@@ -1,4 +1,5 @@
 using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Dsp;
 using NAudio.Wave;
 using System.Diagnostics;
@@ -82,6 +83,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
             new Vector4[SpectrumSampleRamp.Length];
 
         private LowLatencyLoopbackCapture _capture;
+        private MMDeviceEnumerator _deviceEnumerator;
+        private EndpointNotificationClient _endpointNotificationClient;
         private bool _captureRequested;
         private int _captureGeneration;
         private int _sampleWriteIndex;
@@ -137,6 +140,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
                 generation = ++_captureGeneration;
             }
 
+            StartEndpointNotifications();
             TryStartCapture(generation);
         }
 
@@ -172,7 +176,87 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
                 }
             }
 
+            StopEndpointNotifications();
             ResetAnalysis();
+        }
+
+        private void StartEndpointNotifications()
+        {
+            try
+            {
+                _deviceEnumerator = new MMDeviceEnumerator();
+                _endpointNotificationClient = new EndpointNotificationClient(RestartCapture);
+                _deviceEnumerator.RegisterEndpointNotificationCallback(
+                    _endpointNotificationClient);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                StopEndpointNotifications();
+            }
+        }
+
+        private void StopEndpointNotifications()
+        {
+            try
+            {
+                if (_deviceEnumerator != null && _endpointNotificationClient != null)
+                {
+                    _deviceEnumerator.UnregisterEndpointNotificationCallback(
+                        _endpointNotificationClient);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+            finally
+            {
+                _deviceEnumerator?.Dispose();
+                _deviceEnumerator = null;
+                _endpointNotificationClient = null;
+            }
+        }
+
+        private void RestartCapture()
+        {
+            LowLatencyLoopbackCapture previousCapture;
+            int generation;
+            lock (_captureGate)
+            {
+                if (!_captureRequested)
+                {
+                    return;
+                }
+
+                generation = ++_captureGeneration;
+                previousCapture = _capture;
+                _capture = null;
+                if (previousCapture != null)
+                {
+                    previousCapture.DataAvailable -= OnDataAvailable;
+                    previousCapture.RecordingStopped -= OnRecordingStopped;
+                }
+            }
+
+            if (previousCapture != null)
+            {
+                try
+                {
+                    previousCapture.StopRecording();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+                finally
+                {
+                    DisposeCapture(previousCapture);
+                }
+            }
+
+            ResetAnalysis();
+            TryStartCapture(generation);
         }
 
         public Vector4 GetImageScales(bool isPlaying, float pulseScale = 1f)
@@ -925,6 +1009,32 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
                     _endpoint.Dispose();
                 }
             }
+        }
+
+        private sealed class EndpointNotificationClient : IMMNotificationClient
+        {
+            private readonly Action _defaultRenderDeviceChanged;
+
+            public EndpointNotificationClient(Action defaultRenderDeviceChanged)
+            {
+                _defaultRenderDeviceChanged = defaultRenderDeviceChanged;
+            }
+
+            public void OnDefaultDeviceChanged(
+                DataFlow flow,
+                Role role,
+                string defaultDeviceId)
+            {
+                if (flow == DataFlow.Render && role == Role.Multimedia)
+                {
+                    _ = Task.Run(_defaultRenderDeviceChanged);
+                }
+            }
+
+            public void OnDeviceAdded(string pwstrDeviceId) { }
+            public void OnDeviceRemoved(string deviceId) { }
+            public void OnDeviceStateChanged(string deviceId, DeviceState newState) { }
+            public void OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key) { }
         }
 
         private sealed class BassTransientDetector
