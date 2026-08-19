@@ -71,16 +71,11 @@ float RotationTimeScale(uint instanceId)
     return 120.0;
 }
 
-float ImageScale(uint instanceId)
+// Apple Music scales the material as a whole around the view origin. Keep one
+// shared scale for all artwork layers instead of scaling each layer around its
+// own center.
+float ImageScale()
 {
-    if (instanceId == 1)
-    {
-        return ImageScales.y;
-    }
-    if (instanceId == 2)
-    {
-        return ImageScales.z;
-    }
     return ImageScales.x;
 }
 
@@ -89,11 +84,12 @@ RotationOutput RotationVertex(QuadInput input, uint instanceId : SV_InstanceID)
     const float twoPi = 6.2831853071795864769;
     float angle = Time * twoPi / RotationTimeScale(instanceId);
 
-    // View * R(-angle) * Translation * R(-angle).
-    float2 position = input.Position.xy * ImageScale(instanceId);
+    // View * Scale * R(-angle) * Translation * R(-angle).
+    float2 position = input.Position.xy;
     position = RotateClockwise(position, angle);
     position += ModelTranslation(instanceId);
     position = RotateClockwise(position, angle);
+    position *= ImageScale();
     position *= ViewScale;
 
     RotationOutput output;
