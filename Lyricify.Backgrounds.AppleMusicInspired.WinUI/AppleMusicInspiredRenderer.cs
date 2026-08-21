@@ -568,6 +568,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
                 ImageScales = Vector4.One,
                 PinchTextureTransform = pinchTextureTransform,
                 LyricsModeMix = lyricsModeMix,
+                RotationScale = GetSettingScale(_settings.RotationScale),
             };
 
             try
@@ -1539,7 +1540,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
             public Vector4 ImageScales;
             public Vector4 PinchTextureTransform;
             public float LyricsModeMix;
-            public Vector3 Padding;
+            public float RotationScale;
+            public Vector2 Padding;
         }
 
         [StructLayout(LayoutKind.Sequential)]

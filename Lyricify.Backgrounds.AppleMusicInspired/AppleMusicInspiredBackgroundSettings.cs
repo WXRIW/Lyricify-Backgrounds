@@ -6,6 +6,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired
 
         public double RenderScale { get; set; } = 1d;
 
+        public double RotationScale { get; set; } = 1d;
+
         public double BassPulseScale { get; set; } = 1d;
 
         public double BlurScale { get; set; } = 1d;

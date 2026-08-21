@@ -3,7 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Lyricify Backgrounds Demo · WPF"
-                 Width="1400" Height="860" MinWidth="700" MinHeight="680"
+                 Width="1400" Height="900" MinWidth="700" MinHeight="680"
                  WindowStartupLocation="CenterScreen"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
@@ -75,7 +75,7 @@
 
                     <TextBlock Text="RENDERING" Style="{StaticResource SectionTitle}" />
                     <Grid>
-                        <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="8"/><RowDefinition/><RowDefinition Height="8"/><RowDefinition/><RowDefinition Height="8"/><RowDefinition/></Grid.RowDefinitions>
+                        <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="8"/><RowDefinition/><RowDefinition Height="8"/><RowDefinition/><RowDefinition Height="8"/><RowDefinition/><RowDefinition Height="8"/><RowDefinition/></Grid.RowDefinitions>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition/><ColumnDefinition Width="58"/></Grid.ColumnDefinitions>
                         <TextBlock Text="Frame rate" Style="{StaticResource ParameterLabel}" />
                         <Slider Grid.Column="1" Minimum="-1" Maximum="120" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding FrameRateLimit}" />
@@ -83,12 +83,15 @@
                         <TextBlock Grid.Row="2" Text="Render scale" Style="{StaticResource ParameterLabel}" />
                         <Slider Grid.Row="2" Grid.Column="1" Minimum="0.125" Maximum="1" TickFrequency="0.025" Value="{Binding RenderScale}" />
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding RenderScale, StringFormat={}{0:0.000}}" Style="{StaticResource ParameterValue}" />
-                        <TextBlock Grid.Row="4" Text="Bass pulse" Style="{StaticResource ParameterLabel}" />
-                        <Slider Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="10" TickFrequency="0.1" Value="{Binding BassPulseScale}" />
-                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding BassPulseScale, StringFormat={}{0:0.00}}" Style="{StaticResource ParameterValue}" />
-                        <TextBlock Grid.Row="6" Text="Blur scale" Style="{StaticResource ParameterLabel}" />
-                        <Slider Grid.Row="6" Grid.Column="1" Minimum="0" Maximum="10" TickFrequency="0.1" Value="{Binding BlurScale}" />
-                        <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding BlurScale, StringFormat={}{0:0.00}}" Style="{StaticResource ParameterValue}" />
+                        <TextBlock Grid.Row="4" Text="Rotation scale" Style="{StaticResource ParameterLabel}" />
+                        <Slider Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="10" TickFrequency="0.1" Value="{Binding RotationScale}" />
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding RotationScale, StringFormat={}{0:0.00}}" Style="{StaticResource ParameterValue}" />
+                        <TextBlock Grid.Row="6" Text="Bass pulse" Style="{StaticResource ParameterLabel}" />
+                        <Slider Grid.Row="6" Grid.Column="1" Minimum="0" Maximum="10" TickFrequency="0.1" Value="{Binding BassPulseScale}" />
+                        <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding BassPulseScale, StringFormat={}{0:0.00}}" Style="{StaticResource ParameterValue}" />
+                        <TextBlock Grid.Row="8" Text="Blur scale" Style="{StaticResource ParameterLabel}" />
+                        <Slider Grid.Row="8" Grid.Column="1" Minimum="0" Maximum="10" TickFrequency="0.1" Value="{Binding BlurScale}" />
+                        <TextBlock Grid.Row="8" Grid.Column="2" Text="{Binding BlurScale, StringFormat={}{0:0.00}}" Style="{StaticResource ParameterValue}" />
                     </Grid>
 
                     <TextBlock Text="MESH" Style="{StaticResource SectionTitle}" />

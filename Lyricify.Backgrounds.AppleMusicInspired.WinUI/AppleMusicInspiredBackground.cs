@@ -55,6 +55,7 @@ public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
 
         settings.FrameRateLimit = value.FrameRateLimit;
         settings.RenderScale = value.RenderScale;
+        settings.RotationScale = value.RotationScale;
         settings.BassPulseScale = value.BassPulseScale;
         settings.BlurScale = value.BlurScale;
         settings.PortraitControlPointCount = value.PortraitControlPointCount;

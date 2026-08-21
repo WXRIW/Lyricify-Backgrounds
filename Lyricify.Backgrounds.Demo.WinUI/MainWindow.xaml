@@ -48,19 +48,22 @@
                     <TextBlock Text="RENDERING" FontSize="12" FontWeight="SemiBold" Foreground="#FFB6C8FF" Margin="0,10,0,0" />
                     <Grid RowSpacing="7">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition/><ColumnDefinition Width="58"/></Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                         <TextBlock Text="Frame rate" VerticalAlignment="Center" Foreground="White" />
                         <Slider Grid.Column="1" Minimum="-1" Maximum="120" StepFrequency="1" Value="{x:Bind ViewModel.FrameRateLimit, Mode=TwoWay}" />
                         <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.FrameRateLimit, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
                         <TextBlock Grid.Row="1" Text="Render scale" VerticalAlignment="Center" Foreground="White" />
                         <Slider Grid.Row="1" Grid.Column="1" Minimum="0.125" Maximum="1" StepFrequency="0.025" Value="{x:Bind ViewModel.RenderScale, Mode=TwoWay}" />
                         <TextBlock Grid.Row="1" Grid.Column="2" Text="{x:Bind ViewModel.RenderScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
-                        <TextBlock Grid.Row="2" Text="Bass pulse" VerticalAlignment="Center" Foreground="White" />
-                        <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="10" StepFrequency="0.1" Value="{x:Bind ViewModel.BassPulseScale, Mode=TwoWay}" />
-                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{x:Bind ViewModel.BassPulseScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
-                        <TextBlock Grid.Row="3" Text="Blur scale" VerticalAlignment="Center" Foreground="White" />
-                        <Slider Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="10" StepFrequency="0.1" Value="{x:Bind ViewModel.BlurScale, Mode=TwoWay}" />
-                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{x:Bind ViewModel.BlurScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="2" Text="Rotation scale" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="10" StepFrequency="0.1" Value="{x:Bind ViewModel.RotationScale, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{x:Bind ViewModel.RotationScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="3" Text="Bass pulse" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="10" StepFrequency="0.1" Value="{x:Bind ViewModel.BassPulseScale, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{x:Bind ViewModel.BassPulseScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
+                        <TextBlock Grid.Row="4" Text="Blur scale" VerticalAlignment="Center" Foreground="White" />
+                        <Slider Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="10" StepFrequency="0.1" Value="{x:Bind ViewModel.BlurScale, Mode=TwoWay}" />
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{x:Bind ViewModel.BlurScale, Mode=OneWay}" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Foreground="#BFFFFFFF" />
                     </Grid>
 
                     <TextBlock Text="MESH" FontSize="12" FontWeight="SemiBold" Foreground="#FFB6C8FF" Margin="0,10,0,0" />

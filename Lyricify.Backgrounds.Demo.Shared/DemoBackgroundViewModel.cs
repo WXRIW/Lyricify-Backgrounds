@@ -44,6 +44,12 @@ public sealed class DemoBackgroundViewModel : INotifyPropertyChanged
         set { if (settings.RenderScale == value) return; settings.RenderScale = value; Changed(); }
     }
 
+    public double RotationScale
+    {
+        get => settings.RotationScale;
+        set { if (settings.RotationScale == value) return; settings.RotationScale = value; Changed(); }
+    }
+
     public double BassPulseScale
     {
         get => settings.BassPulseScale;

@@ -39,6 +39,7 @@ public partial class MainWindow : Window
         switch (e.PropertyName)
         {
             case nameof(DemoBackgroundViewModel.IsPlaying):
+            case nameof(DemoBackgroundViewModel.RotationScale):
             case nameof(DemoBackgroundViewModel.BassPulseScale):
             case nameof(DemoBackgroundViewModel.BlurScale):
                 // The renderer reads these values while producing the next frame.
