@@ -10,12 +10,15 @@
     <WindowsPackageType>None</WindowsPackageType>
     <EnableMsixTooling>false</EnableMsixTooling>
     <IsPackable>true</IsPackable>
-    <PackageId>Lyricify.Backgrounds.AppleMusicInspired.WinUI</PackageId>
-    <Description>Preview WinUI adapter for the Lyricify Apple Music inspired background.</Description>
+    <PackageId>Lyricify.Backgrounds.AppleMusicInspired.Ios.WinUI</PackageId>
+    <Description>WinUI adapter for the current iOS Apple Music inspired background.</Description>
     <Authors>XY Wang</Authors>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lyricify.Backgrounds\Lyricify.Backgrounds.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.Hosting.WinUI\Lyricify.Backgrounds.Hosting.WinUI.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Ios\Lyricify.Backgrounds.AppleMusicInspired.Ios.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared\Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared.csproj" />
     <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Windows\Lyricify.Backgrounds.AppleMusicInspired.Windows.csproj" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
     <PackageReference Include="SharpGen.Runtime" Version="2.4.2-beta" />

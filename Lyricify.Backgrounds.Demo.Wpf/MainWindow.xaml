@@ -3,7 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Lyricify Backgrounds Demo · WPF"
-                 Width="1400" Height="900" MinWidth="700" MinHeight="680"
+                 Width="1600" Height="1000" MinWidth="700" MinHeight="680"
                  WindowStartupLocation="CenterScreen"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
@@ -63,6 +63,8 @@
                     </Grid>
 
                     <TextBlock Text="PLAYBACK &amp; LAYOUT" Style="{StaticResource SectionTitle}" />
+                    <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding SelectedBackgroundIndex}"
+                              Margin="0,0,0,12" ToolTip="Choose a registered background by ID." />
                     <ComboBox ItemsSource="{Binding PresetOptions}" SelectedIndex="{Binding SelectedPresetIndex}"
                               Margin="0,0,0,12" ToolTip="Choose one of the five original preset slots." />
                     <WrapPanel>

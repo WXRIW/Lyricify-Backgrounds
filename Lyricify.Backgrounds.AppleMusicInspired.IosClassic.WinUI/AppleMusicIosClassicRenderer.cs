@@ -1,4 +1,6 @@
-using Lyricify.Backgrounds.AppleMusicInspired.Rendering;
+using Lyricify.Backgrounds.AppleMusicInspired.IosClassic;
+using Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared.Rendering;
+using Lyricify.Backgrounds.AppleMusicInspired.Windows;
 using SharpGen.Runtime;
 using System.Diagnostics;
 using System.Drawing;
@@ -14,12 +16,12 @@ using DrawingPixelFormat = System.Drawing.Imaging.PixelFormat;
 using Format = Vortice.DXGI.Format;
 
 #nullable disable
-namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
+namespace Lyricify.Backgrounds.AppleMusicInspired.IosClassic.WinUI
 {
     /// <summary>
     /// Direct3D renderer for the animated background material.
     /// </summary>
-    internal sealed class AppleMusicInspiredRenderer : IDisposable
+    internal sealed class AppleMusicIosClassicRenderer : IDisposable
     {
         private const double ArtworkTransitionSeconds = 0.5;
         private const double LyricsModeTransitionSeconds = 0.25;
@@ -27,15 +29,17 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
         private const float GaussianKernelSigma = 42.5f;
         private const float LyricsBlurSigma = 42.5f;
         private const float OrdinaryBlurSigma = 80f;
+        private const float ClassicBlurSigma = 40f;
         private const float DarkBehindLyricsBlackScrimAlpha = 0.4f;
         private const float LightAppearanceBlackScrimAlpha = 1f / 3f;
         private const float PortraitTextureScale = 1f;
         private const float LandscapeTextureScale = 0.8f;
+        private const float ClassicTextureScale = 0.8f;
         private const string ShaderResourceName =
-            "Lyricify.Backgrounds.AppleMusicInspired.Resources.AppleMusicInspiredBackground.hlsl";
+            "Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared.Resources.AppleMusicIosClassicBackground.hlsl";
 
         private readonly Stopwatch _animationClock = new();
-        private readonly AppleMusicInspiredBackgroundSettings _settings;
+        private readonly AppleMusicIosClassicBackgroundSettings _settings;
         private readonly Func<bool> _isPlayingProvider;
         private double _renderScale;
         private long _minimumRenderIntervalTicks;
@@ -46,7 +50,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
         private readonly Func<string, Task<Bitmap>> _artworkLoader;
         private AppleMusicPinchVertex[] _meshVertices;
         private ushort[] _meshIndices;
-        private readonly AppleMusicSpectrumAnalysis _spectrumAnalysis;
 
         private bool _isVerticalLayout = true;
 
@@ -111,8 +114,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
         private ID3D11SamplerState _linearZeroBorderSampler;
         private ID3D11RasterizerState _rasterizerState;
 
-        public AppleMusicInspiredRenderer(
-            AppleMusicInspiredBackgroundSettings settings = null,
+        public AppleMusicIosClassicRenderer(
+            AppleMusicIosClassicBackgroundSettings settings = null,
             bool lightTheme = false,
             Func<bool> isPlayingProvider = null,
             SwapChainPanelPresenter compositionPresenter = null,
@@ -128,22 +131,19 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
                 ?? throw new ArgumentNullException(nameof(compositionPresenter));
             _firstCompositionFramePresented = firstCompositionFramePresented;
             _artworkLoader = artworkLoader;
-            _spectrumAnalysis = new AppleMusicSpectrumAnalysis(
-                deviceLatencyProvider,
-                audioEndpointIdProvider);
             if (presetSlot < 0)
             {
-                PresetIndex = AppleMusicInspiredMesh.SelectPreset();
-                LandscapePresetIndex = AppleMusicInspiredMesh.SelectLandscapePreset();
+                PresetIndex = AppleMusicIosClassicMesh.SelectPreset();
+                LandscapePresetIndex = PresetIndex;
             }
             else
             {
                 int resolvedSlot = Math.Clamp(
                     presetSlot,
                     0,
-                    AppleMusicInspiredMesh.PresetSlotCount - 1);
-                PresetIndex = AppleMusicInspiredMesh.ResolvePortraitPreset(resolvedSlot);
-                LandscapePresetIndex = resolvedSlot;
+                    AppleMusicIosClassicMesh.PresetSlotCount - 1);
+                PresetIndex = AppleMusicIosClassicMesh.ResolvePortraitPreset(resolvedSlot);
+                LandscapePresetIndex = PresetIndex;
             }
             (_meshVertices, _meshIndices) = CreateMesh(_isVerticalLayout);
 
@@ -168,15 +168,17 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
         private (AppleMusicPinchVertex[] Vertices, ushort[] Indices) CreateMesh(
             bool isVerticalLayout)
         {
-            return AppleMusicInspiredMesh.Create(
-                isVerticalLayout ? PresetIndex : LandscapePresetIndex,
-                isVerticalLayout,
-                isVerticalLayout
-                    ? _settings.PortraitControlPointCount
-                    : _settings.LandscapeControlPointCount,
-                isVerticalLayout
-                    ? _settings.PortraitSubdivisionLevels
-                    : _settings.LandscapeSubdivisionLevels);
+            int configuredControlPointCount = isVerticalLayout
+                ? _settings.PortraitControlPointCount
+                : _settings.LandscapeControlPointCount;
+            int configuredSubdivisionLevels = isVerticalLayout
+                ? _settings.PortraitSubdivisionLevels
+                : _settings.LandscapeSubdivisionLevels;
+            return AppleMusicIosClassicMesh.Create(
+                PresetIndex,
+                isVerticalLayout: true,
+                configuredControlPointCount < 0 ? 6 : configuredControlPointCount,
+                configuredSubdivisionLevels < 0 ? 3 : configuredSubdivisionLevels);
         }
 
         public void SetArtwork(string url, string trackId)
@@ -266,12 +268,11 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
         }
 
         /// <summary>
-        /// Reopens audio capture using the endpoint currently returned by the
-        /// endpoint provider supplied to the constructor.
+        /// Retains the common session contract; Classic has no audio capture.
         /// </summary>
         public void RefreshAudioEndpoint()
         {
-            _spectrumAnalysis.RefreshAudioEndpoint();
+            // The iOS Classic profile is intentionally not audio-reactive.
         }
 
         /// <summary>
@@ -427,10 +428,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
                 QueueDeviceRecovery(ex);
             }
 
-            if (!_refreshDisabled)
-            {
-                _spectrumAnalysis.Start();
-            }
             _animationClock.Start();
             _forceNextRender = true;
         }
@@ -531,30 +528,19 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
             float transitionMix = GetTransitionMix(time);
             float lyricsModeMix = GetLyricsModeMix(time);
             float viewAspectRatio = _outputSurface.Width / (float)_outputSurface.Height;
-            Vector2 viewScale = viewAspectRatio >= 1f
-                ? new Vector2(1f, viewAspectRatio)
-                : new Vector2(1f / viewAspectRatio, 1f);
-            float pinchTextureScale = _isVerticalLayout
-                ? PortraitTextureScale
-                : LandscapeTextureScale;
+            Vector2 viewScale = new(
+                -(viewAspectRatio < 1f ? 1f / viewAspectRatio : 1f),
+                viewAspectRatio);
+            float pinchTextureScale = ClassicTextureScale;
             float pinchTextureOffset = (1f - pinchTextureScale) * 0.5f;
-            Vector4 lyricsImageScales = _refreshDisabled
-                ? Vector4.One
-                : _spectrumAnalysis.GetImageScales(
-                    _isPlayingProvider?.Invoke() ??
-                        false,
-                    GetSettingScale(_settings.BassPulseScale));
+            Vector4 lyricsImageScales = Vector4.One;
             var pinchTextureTransform = new Vector4(
                 pinchTextureScale,
                 pinchTextureScale,
                 pinchTextureOffset,
                 pinchTextureOffset);
             float blurScale = GetSettingScale(_settings.BlurScale);
-            // Interpolate the blur radius during mode transitions.
-            float currentBlurSigma = Lerp(
-                OrdinaryBlurSigma,
-                LyricsBlurSigma,
-                lyricsModeMix);
+            float currentBlurSigma = ClassicBlurSigma;
             var constants = new FrameConstants
             {
                 Time = (float)time,
@@ -563,7 +549,9 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
                 BlackScrimAlpha = _lightTheme
                     ? LightAppearanceBlackScrimAlpha
                     : DarkBehindLyricsBlackScrimAlpha,
-                OutputDitherStrength = 1f,
+                ReservedProfilePadding = 0f,
+                DarkAppearanceMix = _lightTheme ? 0f : 1f,
+                FramePadding = 0f,
                 BlurScale = GetBlurScale(currentBlurSigma, blurScale),
                 ImageScales = Vector4.One,
                 PinchTextureTransform = pinchTextureTransform,
@@ -663,7 +651,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
                 return _lyricsModeMix;
             }
 
-            float easedProgress = EvaluateUIKitEaseInOut(Math.Clamp(progress, 0f, 1f));
+            float easedProgress = EvaluateStandardEaseInOut(Math.Clamp(progress, 0f, 1f));
             _lyricsModeMix = Lerp(
                 _lyricsModeMixFrom,
                 _lyricsModeMixTo,
@@ -672,7 +660,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
         }
 
         // Standard ease-in-out timing curve.
-        private static float EvaluateUIKitEaseInOut(float progress)
+        private static float EvaluateStandardEaseInOut(float progress)
         {
             if (progress <= 0f || progress >= 1f)
             {
@@ -757,10 +745,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
             BindPixelShaderResources(
                 _currentArtwork.ShaderResourceView,
                 _previousArtwork?.ShaderResourceView ?? _currentArtwork.ShaderResourceView);
-
-            // Keep an aspect-fill copy underneath the moving layers.
-            _context.VSSetShader(_artworkFillVertexShader, null, 0);
-            _context.DrawIndexed(6, 0, 0);
 
             _context.VSSetShader(_rotationVertexShader, null, 0);
             _context.DrawIndexedInstanced(6, 3, 0, 0, 0);
@@ -1436,7 +1420,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
 
         private static string ReadShaderSource()
         {
-            Stream stream = typeof(AppleMusicInspiredBackgroundSettings).Assembly
+            Stream stream = typeof(AppleMusicIosClassicMesh).Assembly
                 .GetManifestResourceStream(ShaderResourceName);
             if (stream == null)
             {
@@ -1457,7 +1441,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
             int result = D3DCompile(
                 sourceBytes,
                 (nuint)sourceBytes.Length,
-                "AppleMusicInspiredBackground.hlsl",
+                "AppleMusicIosClassicBackground.hlsl",
                 IntPtr.Zero,
                 IntPtr.Zero,
                 entryPoint,
@@ -1535,13 +1519,14 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
             public float TextureTransitionMix;
             public Vector2 ViewScale;
             public float BlackScrimAlpha;
-            public float OutputDitherStrength;
+            public float ReservedProfilePadding;
             public Vector2 BlurScale;
             public Vector4 ImageScales;
             public Vector4 PinchTextureTransform;
             public float LyricsModeMix;
             public float RotationScale;
-            public Vector2 Padding;
+            public float DarkAppearanceMix;
+            public float FramePadding;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -1695,7 +1680,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI
             if (!_isActive) return;
             _isActive = false;
             _animationClock.Stop();
-            _spectrumAnalysis.Stop();
             ReleaseDirectXResources();
             _deviceRecoveryPending = false;
         }

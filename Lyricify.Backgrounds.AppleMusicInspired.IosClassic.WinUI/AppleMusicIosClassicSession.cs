@@ -1,32 +1,35 @@
+using Lyricify.Backgrounds;
+using Lyricify.Backgrounds.AppleMusicInspired.IosClassic;
+using Lyricify.Backgrounds.AppleMusicInspired.Windows;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
-namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI;
+namespace Lyricify.Backgrounds.AppleMusicInspired.IosClassic.WinUI;
 
 /// <summary>
 /// Native WinUI adapter. The shared HLSL pipeline renders into a composition
 /// swap chain owned by a SwapChainPanel, so XAML content can be layered above it.
 /// </summary>
-public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
+public class AppleMusicIosClassicBackgroundBase : Grid, IBackgroundSession
 {
     private readonly SwapChainPanel panel = new();
-    private readonly AppleMusicInspiredBackgroundSettings settings;
+    private readonly AppleMusicIosClassicBackgroundSettings settings;
     private readonly Func<string?>? audioEndpointIdProvider;
     private BackgroundState state = new() { IsVisible = true, IsPlaying = true };
     private SwapChainPanelPresenter? presenter;
-    private AppleMusicInspiredRenderer? renderer;
+    private AppleMusicIosClassicRenderer? renderer;
     private byte[]? artwork;
     private int presetSlot;
     private bool disposed;
     private bool renderingHooked;
 
-    public AppleMusicInspiredBackground(
-        AppleMusicInspiredBackgroundSettings? settings = null,
+    public AppleMusicIosClassicBackgroundBase(
+        AppleMusicIosClassicBackgroundSettings? settings = null,
         int presetSlot = -1,
         Func<string?>? audioEndpointIdProvider = null)
     {
-        this.settings = settings?.Clone() ?? new AppleMusicInspiredBackgroundSettings();
+        this.settings = settings?.Clone() ?? new AppleMusicIosClassicBackgroundSettings();
         this.presetSlot = presetSlot;
         this.audioEndpointIdProvider = audioEndpointIdProvider;
         Background = new SolidColorBrush(Microsoft.UI.Colors.Black);
@@ -44,7 +47,7 @@ public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
     public event EventHandler? FirstFramePresented;
     public event EventHandler<BackgroundFaultedEventArgs>? Faulted;
 
-    public void ApplySettings(AppleMusicInspiredBackgroundSettings value)
+    public void ApplySettings(AppleMusicIosClassicBackgroundSettings value)
     {
         ArgumentNullException.ThrowIfNull(value);
         bool recreateMesh =
@@ -133,7 +136,7 @@ public sealed class AppleMusicInspiredBackground : Grid, IBackgroundSession
     {
         if (renderer != null) return;
         presenter = new SwapChainPanelPresenter(panel, RaiseFirstFrame);
-        renderer = new AppleMusicInspiredRenderer(
+        renderer = new AppleMusicIosClassicRenderer(
             settings,
             state.IsLightTheme,
             () => state.IsPlaying,

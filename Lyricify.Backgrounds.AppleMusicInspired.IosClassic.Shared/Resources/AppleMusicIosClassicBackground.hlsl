@@ -9,13 +9,14 @@ cbuffer FrameConstants : register(b0)
     float TextureTransitionMix;
     float2 ViewScale;
     float BlackScrimAlpha;
-    float OutputDitherStrength;
+    float ReservedProfilePadding;
     float2 BlurScale;
     float4 ImageScales;
     float4 PinchTextureTransform;
     float LyricsModeMix;
     float RotationScale;
-    float2 Padding;
+    float DarkAppearanceMix;
+    float FramePadding;
 };
 
 struct QuadInput
@@ -46,51 +47,52 @@ float2 RotateCounterClockwise(float2 value, float angle)
         sine * value.x + cosine * value.y);
 }
 
+float2 RotateClockwise(float2 value, float angle)
+{
+    float sine;
+    float cosine;
+    sincos(angle, sine, cosine);
+    return float2(
+        cosine * value.x + sine * value.y,
+        -sine * value.x + cosine * value.y);
+}
+
 float2 ModelTranslation(uint instanceId)
 {
     if (instanceId == 1)
     {
-        return float2(-0.25, 0.15);
+        return float2(-0.5, 0.7);
     }
     if (instanceId == 2)
     {
-        return float2(0.7, 0.7);
+        return float2(-0.95, -0.7);
     }
     return float2(0.0, 0.0);
 }
 
 float ModelScale(uint instanceId)
 {
-    // The iOS 16.3 constructor stores these diagonal model matrices:
-    // model 0 = scale 1.4, models 1 and 2 = scale 0.7.
-    if (instanceId == 0)
-    {
-        return 1.4;
-    }
-    return 0.7;
+    return 1.8;
 }
 
 float RotationTimeScale(uint instanceId)
 {
-    // Values written by the iOS 16.3 RotatingArtworkRenderer constructor:
-    // model 0 = 120 s, model 1 = 70 s, model 2 = 90 s.
     if (instanceId == 1)
     {
-        return 70.0;
+        return 90.0;
     }
     if (instanceId == 2)
     {
-        return 90.0;
+        return 70.0;
     }
     return 120.0;
 }
 
-// Apple Music scales the material as a whole around the view origin. Keep one
-// shared scale for all artwork layers instead of scaling each layer around its
-// own center.
+// Keep one material scale around the view origin so all artwork layers share
+// the same anchor.
 float ImageScale()
 {
-    return ImageScales.x;
+    return 1.0;
 }
 
 RotationOutput RotationVertex(QuadInput input, uint instanceId : SV_InstanceID)
@@ -99,22 +101,17 @@ RotationOutput RotationVertex(QuadInput input, uint instanceId : SV_InstanceID)
     float angle = Time * RotationScale * twoPi /
         RotationTimeScale(instanceId);
 
-    // iOS 16.3 uses one local rotation per model. Model 2 is parented to
-    // model 0, while model 1 is independent; do not apply the local angle
-    // twice (that would make the apparent speed 2x). The model matrix scales
-    // the artwork before its translation, and the view aspect transform is
-    // applied before the parent's rotation.
-    float2 position = input.Position.xy;
-    position = RotateCounterClockwise(position, angle);
+    // Compose each model from clockwise rotation, 1.8x scale, and translation.
+    // The second model passes through the same rotation again to create its
+    // nested motion.
+    float2 position = RotateClockwise(input.Position.xy, angle);
     position *= ModelScale(instanceId);
-    position += ModelTranslation(instanceId);
-    position *= ViewScale;
-    if (instanceId == 2)
+    position += ModelTranslation(instanceId) * ModelScale(instanceId);
+    if (instanceId == 1)
     {
-        float parentAngle = Time * RotationScale * twoPi /
-            RotationTimeScale(0);
-        position = RotateCounterClockwise(position, parentAngle);
+        position = RotateClockwise(position, angle);
     }
+    position *= ViewScale;
     position *= ImageScale();
 
     RotationOutput output;
@@ -123,34 +120,37 @@ RotationOutput RotationVertex(QuadInput input, uint instanceId : SV_InstanceID)
     return output;
 }
 
-float3 ApplySaturation(float3 color, float saturation)
+float3 ApplyClassicSaturation(float3 color, float saturation)
 {
-    // Saturation matrix tuned for the background material.
-    float3 redColumn = float3(
-        0.2126 + 0.7873 * saturation,
-        0.2126 - 0.2126 * saturation,
-        0.2126 - 0.2126 * saturation);
-    float3 greenColumn = float3(
-        0.7152 - 0.7152 * saturation,
-        0.7152 + 0.2848 * saturation,
-        0.7152 - 0.7152 * saturation);
-    float3 blueColumn = float3(
-        0.0722 - 0.0722 * saturation,
-        0.0722 - 0.0722 * saturation,
-        0.0722 + 0.9278 * saturation);
-    return
-        redColumn * color.r +
-        greenColumn * color.g +
-        blueColumn * color.b;
+    // Half-precision Rec. 601 weights preserve the classic material response.
+    float luma = dot(
+        color,
+        float3(0.300048828125, 0.58984375, 0.1099853515625));
+    return luma.xxx + (color - luma.xxx) * saturation;
 }
 
-float3 ApplyTreatedMaterial(float3 color)
+float3 ApplyClassicPinchMaterial(float3 color)
 {
-    // Reduce saturation before the final composition pass.
-    color = ApplySaturation(color, 1.4);
-    color = clamp(color, -0.752941, 1.25098);
-    color = ApplySaturation(color, 0.70);
-    return lerp(color, 0.0.xxx, BlackScrimAlpha);
+    // Apply the second saturation boost only to the lyrics treatment, followed
+    // by a 25% black scrim and separate light and dark appearance branches.
+    color = min(
+        ApplyClassicSaturation(color, 2.0),
+        0.998046875.xxx);
+    float3 blackMixed = color * 0.75;
+    float3 lightAppearance = blackMixed + 0.08;
+    float3 darkAppearance =
+        blackMixed * 0.90 + 0.10 - 0.20;
+    return lerp(lightAppearance, darkAppearance, DarkAppearanceMix);
+}
+
+float3 ApplyLyricsMaterial(float3 color)
+{
+    return ApplyClassicPinchMaterial(color);
+}
+
+float3 ApplyOrdinaryMaterial(float3 color)
+{
+    return color;
 }
 
 float4 RotationPixel(RotationOutput input) : SV_TARGET
@@ -158,6 +158,8 @@ float4 RotationPixel(RotationOutput input) : SV_TARGET
     float3 current = Source0.Sample(LinearClampSampler, input.TextureCoordinate).rgb;
     float3 previous = Source1.Sample(LinearClampSampler, input.TextureCoordinate).rgb;
     float3 color = lerp(previous, current, TextureTransitionMix);
+    // Apply the first saturation pass before the blur.
+    color = ApplyClassicSaturation(color, 1.3);
     return float4(color, 1.0);
 }
 
@@ -299,7 +301,11 @@ PinchOutput PinchVertex(PinchInput input)
     const float pi = 3.14159265358979323846;
     const float meshWarpTimeScale = 5.0;
     float phase = acos(sin(Time * pi / meshWarpTimeScale)) / pi;
-    float mixValue = phase * phase * (3.0 - 2.0 * phase);
+    float inversePhase = 1.0 - phase;
+    float mixValue =
+        3.0 * inversePhase * inversePhase * phase * 0.18 +
+        3.0 * inversePhase * phase * phase * 0.82 +
+        phase * phase * phase;
 
     PinchOutput output;
     float2 warpedPosition = lerp(input.FromPosition, input.ToPosition, mixValue);
@@ -313,46 +319,37 @@ PinchOutput PinchVertex(PinchInput input)
     return output;
 }
 
-float3 SampleTreatedMaterial(float2 textureCoordinate)
+float3 SampleMaterial(float2 textureCoordinate)
 {
-    float4 lyricSample =
+    float4 sample =
         Source0.Sample(LinearClampSampler, textureCoordinate);
-    float3 lyricColor =
-        lyricSample.rgb / max(lyricSample.a, 1.0 / 65535.0);
-
-    return ApplyTreatedMaterial(lyricColor);
+    return sample.rgb / max(sample.a, 1.0 / 65535.0);
 }
 
 float4 FinishMaterial(float3 color, float2 pixelPosition)
 {
-    // Half-LSB noise reduces banding when the result is quantized to BGRA8.
-    float dither = frac(
-        52.9829189 * frac(dot(pixelPosition, float2(0.06711056, 0.00583715)))) -
-        0.5;
-    color += dither * (OutputDitherStrength / 255.0);
-
-    return float4(clamp(color, 0.07, 0.97), 1.0);
+    // Preserve the full black-to-white output range for this profile.
+    return float4(clamp(color, 0.0, 1.0), 1.0);
 }
 
 float4 OrdinaryMaterialPixel(QuadOutput input) : SV_TARGET
 {
-    // Ordinary mode keeps the treated backing image without mesh deformation.
     return FinishMaterial(
-        SampleTreatedMaterial(input.TextureCoordinate),
+        ApplyOrdinaryMaterial(SampleMaterial(input.TextureCoordinate)),
         input.Position.xy);
 }
 
 float4 MaterialTreatedPixel(QuadOutput input) : SV_TARGET
 {
     return FinishMaterial(
-        SampleTreatedMaterial(input.TextureCoordinate),
+        ApplyLyricsMaterial(SampleMaterial(input.TextureCoordinate)),
         input.Position.xy);
 }
 
 float4 PinchPixel(PinchOutput input) : SV_TARGET
 {
     return FinishMaterial(
-        SampleTreatedMaterial(input.TextureCoordinate),
+        ApplyLyricsMaterial(SampleMaterial(input.TextureCoordinate)),
         input.Position.xy);
 }
 
@@ -363,10 +360,10 @@ float4 CompositeMaterial(
 {
     float4 ordinarySample =
         Source1.Sample(LinearClampSampler, ordinaryTextureCoordinate);
-    float3 ordinaryColor =
-        ordinarySample.rgb / max(ordinarySample.a, 1.0 / 65535.0);
-    ordinaryColor = ApplyTreatedMaterial(ordinaryColor);
-    float3 lyricColor = SampleTreatedMaterial(lyricTextureCoordinate);
+    float3 ordinaryColor = ApplyOrdinaryMaterial(
+        ordinarySample.rgb / max(ordinarySample.a, 1.0 / 65535.0));
+    float3 lyricColor = ApplyLyricsMaterial(
+        SampleMaterial(lyricTextureCoordinate));
     return FinishMaterial(
         lerp(ordinaryColor, lyricColor, LyricsModeMix),
         pixelPosition);

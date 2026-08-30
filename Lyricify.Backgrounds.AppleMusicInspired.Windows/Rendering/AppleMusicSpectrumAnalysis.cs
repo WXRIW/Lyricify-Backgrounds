@@ -7,7 +7,7 @@ using System.Numerics;
 using NAudioComplex = NAudio.Dsp.Complex;
 
 #nullable disable
-namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
+namespace Lyricify.Backgrounds.AppleMusicInspired.Windows.Rendering
 {
     /// <summary>
     /// Captures loopback audio and produces smoothed spectrum values for the

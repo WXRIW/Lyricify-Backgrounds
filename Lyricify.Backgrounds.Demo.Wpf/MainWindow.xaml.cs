@@ -1,6 +1,8 @@
-using Lyricify.Backgrounds.AppleMusicInspired;
-using Lyricify.Backgrounds.AppleMusicInspired.Wpf;
+using Lyricify.Backgrounds;
+using Lyricify.Backgrounds.AppleMusicInspired.Ios.Wpf;
+using Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf;
 using Lyricify.Backgrounds.Demo.Shared;
+using Lyricify.Backgrounds.Hosting.Wpf;
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.Windows;
@@ -12,7 +14,7 @@ public partial class MainWindow : Window
 {
     private readonly DemoBackgroundViewModel viewModel = new();
     private readonly DispatcherTimer rebuildTimer;
-    private AppleMusicInspiredBackground? embedded;
+    private WpfBackgroundInstance? preview;
     private byte[]? artwork;
     private string artworkId = string.Empty;
 
@@ -21,10 +23,18 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = viewModel;
         rebuildTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
-        rebuildTimer.Tick += (_, _) => { rebuildTimer.Stop(); RebuildPreview(); };
+        rebuildTimer.Tick += (_, _) =>
+        {
+            rebuildTimer.Stop();
+            RebuildPreview();
+        };
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         PreviewHost.SizeChanged += (_, _) => PreviewClip.Rect = new Rect(PreviewHost.RenderSize);
-        Loaded += (_, _) => RebuildPreview();
+        Loaded += async (_, _) =>
+        {
+            RebuildPreview();
+            await LoadStartupArtworkAsync();
+        };
         Closed += (_, _) => DisposePreview();
     }
 
@@ -33,35 +43,16 @@ public partial class MainWindow : Window
         if (e.PropertyName is nameof(DemoBackgroundViewModel.ArtworkUrl) or nameof(DemoBackgroundViewModel.Status))
             return;
 
-        if (embedded == null)
+        if (preview == null)
             return;
 
-        switch (e.PropertyName)
+        if (e.PropertyName is nameof(DemoBackgroundViewModel.IsPlaying)
+            or nameof(DemoBackgroundViewModel.IsVertical)
+            or nameof(DemoBackgroundViewModel.IsLightTheme)
+            or nameof(DemoBackgroundViewModel.IsBehindLyrics))
         {
-            case nameof(DemoBackgroundViewModel.IsPlaying):
-            case nameof(DemoBackgroundViewModel.RotationScale):
-            case nameof(DemoBackgroundViewModel.BassPulseScale):
-            case nameof(DemoBackgroundViewModel.BlurScale):
-                // The renderer reads these values while producing the next frame.
-                return;
-
-            case nameof(DemoBackgroundViewModel.IsVertical):
-                embedded.SetVerticalLayout(viewModel.IsVertical);
-                return;
-
-            case nameof(DemoBackgroundViewModel.IsBehindLyrics):
-                embedded.SetIsBehindLyrics(viewModel.IsBehindLyrics);
-                return;
-
-            case nameof(DemoBackgroundViewModel.PortraitControlPointCount):
-            case nameof(DemoBackgroundViewModel.PortraitSubdivisionLevels):
-                if (!viewModel.IsVertical) return;
-                break;
-
-            case nameof(DemoBackgroundViewModel.LandscapeControlPointCount):
-            case nameof(DemoBackgroundViewModel.LandscapeSubdivisionLevels):
-                if (viewModel.IsVertical) return;
-                break;
+            ApplyState();
+            return;
         }
 
         rebuildTimer.Stop();
@@ -71,28 +62,54 @@ public partial class MainWindow : Window
     private void RebuildPreview()
     {
         DisposePreview();
-        embedded = new AppleMusicInspiredBackground(
-            viewModel.Settings,
-            viewModel.IsLightTheme,
-            () => viewModel.IsPlaying,
-            presetSlot: viewModel.SelectedPresetIndex - 1);
-        embedded.SetVerticalLayout(viewModel.IsVertical, false);
-        embedded.SetIsBehindLyrics(viewModel.IsBehindLyrics);
-        PreviewHost.Children.Insert(0, embedded);
+        var catalog = new WpfBackgroundCatalog(
+        [
+            new AppleMusicIosWpfBackgroundFactory(
+                lightTheme: viewModel.IsLightTheme,
+                presetSlot: viewModel.SelectedPresetIndex - 1),
+            new AppleMusicIosClassicWpfBackgroundFactory(
+                lightTheme: viewModel.IsLightTheme,
+                presetSlot: viewModel.SelectedPresetIndex - 1),
+        ]);
+        preview = catalog.Create(viewModel.SelectedBackgroundId, viewModel.Settings);
+        preview.Session.FirstFramePresented += Preview_FirstFramePresented;
+        preview.Session.Faulted += Preview_Faulted;
+        PreviewHost.Children.Insert(0, preview.View);
+        ApplyState();
         _ = ApplyArtworkAsync();
     }
 
+    private void ApplyState() => preview?.Session.UpdateState(new BackgroundState
+    {
+        IsPlaying = viewModel.IsPlaying,
+        IsVertical = viewModel.IsVertical,
+        IsLightTheme = viewModel.IsLightTheme,
+        IsBehindLyrics = viewModel.IsBehindLyrics,
+        IsVisible = true,
+    });
+
     private void DisposePreview()
     {
-        if (embedded != null) PreviewHost.Children.Remove(embedded);
-        embedded = null;
+        rebuildTimer.Stop();
+        if (preview == null) return;
+        preview.Session.FirstFramePresented -= Preview_FirstFramePresented;
+        preview.Session.Faulted -= Preview_Faulted;
+        PreviewHost.Children.Remove(preview.View);
+        preview.Dispose();
+        preview = null;
     }
+
+    private void Preview_FirstFramePresented(object? sender, EventArgs e) =>
+        viewModel.Status = "The shared HLSL renderer is active.";
+
+    private void Preview_Faulted(object? sender, BackgroundFaultedEventArgs e) =>
+        viewModel.Status = e.Exception.Message;
 
     private async void LoadUrl_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            artwork = await AppleMusicInspiredArtworkLoader.LoadFromUriAsync(new Uri(viewModel.ArtworkUrl));
+            artwork = await DemoArtworkLoader.LoadFromUriAsync(new Uri(viewModel.ArtworkUrl));
             artworkId = viewModel.ArtworkUrl;
             await ApplyArtworkAsync();
             viewModel.Status = "Artwork loaded.";
@@ -106,7 +123,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            artwork = await AppleMusicInspiredArtworkLoader.LoadFromFileAsync(dialog.FileName);
+            artwork = await DemoArtworkLoader.LoadFromFileAsync(dialog.FileName);
             artworkId = dialog.FileName;
             await ApplyArtworkAsync();
             viewModel.Status = "Artwork loaded.";
@@ -116,10 +133,31 @@ public partial class MainWindow : Window
 
     private async Task ApplyArtworkAsync()
     {
-        if (artwork == null) return;
-        using var bitmap = AppleMusicInspiredArtworkLoader.Decode(artwork);
-        if (embedded != null) await embedded.SetArtworkAsync(bitmap, artworkId);
+        WpfBackgroundInstance? target = preview;
+        if (artwork == null || target == null) return;
+        await target.Session.SetArtworkAsync(new BackgroundArtwork(artworkId, artwork));
     }
+
+    private async Task LoadStartupArtworkAsync()
+    {
+        string? path = GetCommandLineValue("--artwork=");
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            artwork = await DemoArtworkLoader.LoadFromFileAsync(path);
+            artworkId = path;
+            await ApplyArtworkAsync();
+            viewModel.Status = "Artwork loaded.";
+        }
+        catch (Exception exception)
+        {
+            viewModel.Status = exception.Message;
+        }
+    }
+
+    private static string? GetCommandLineValue(string prefix) =>
+        Environment.GetCommandLineArgs()
+            .FirstOrDefault(argument => argument.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))?[prefix.Length..];
 
     private void Reset_Click(object sender, RoutedEventArgs e) => viewModel.Reset();
 }

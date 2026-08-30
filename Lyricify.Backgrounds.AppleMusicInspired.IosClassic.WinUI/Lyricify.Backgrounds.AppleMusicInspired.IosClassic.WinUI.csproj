@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <IsPackable>true</IsPackable>
+    <PackageId>Lyricify.Backgrounds.AppleMusicInspired.IosClassic.WinUI</PackageId>
+    <Description>WinUI adapter for the iOS 13 Classic Apple Music inspired background.</Description>
+    <Authors>XY Wang</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Lyricify.Backgrounds\Lyricify.Backgrounds.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.Hosting.WinUI\Lyricify.Backgrounds.Hosting.WinUI.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.IosClassic\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Windows\Lyricify.Backgrounds.AppleMusicInspired.Windows.csproj" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260101001" />
+    <PackageReference Include="SharpGen.Runtime" Version="2.4.2-beta" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.2.0" />
+  </ItemGroup>
+</Project>

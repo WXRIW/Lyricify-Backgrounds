@@ -1,6 +1,6 @@
 using System.Drawing;
 
-namespace Lyricify.Backgrounds.AppleMusicInspired
+namespace Lyricify.Backgrounds.AppleMusicInspired.Windows
 {
     public static class AppleMusicInspiredArtworkLoader
     {

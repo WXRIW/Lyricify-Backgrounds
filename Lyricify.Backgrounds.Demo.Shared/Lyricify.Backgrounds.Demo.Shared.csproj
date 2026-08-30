@@ -7,6 +7,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired\Lyricify.Backgrounds.AppleMusicInspired.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Ios\Lyricify.Backgrounds.AppleMusicInspired.Ios.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.IosClassic\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.csproj" />
   </ItemGroup>
 </Project>

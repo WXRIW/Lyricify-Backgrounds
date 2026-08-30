@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <PackageId>Lyricify.Backgrounds.AppleMusicInspired.IosClassic</PackageId>
+    <Description>iOS 13 Classic Apple Music inspired background profile.</Description>
+    <Authors>XY Wang</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Lyricify.Backgrounds\Lyricify.Backgrounds.csproj" />
+  </ItemGroup>
+</Project>

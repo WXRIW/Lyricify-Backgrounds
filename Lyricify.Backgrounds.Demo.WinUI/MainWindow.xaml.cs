@@ -1,25 +1,38 @@
-using Lyricify.Backgrounds.AppleMusicInspired;
+using Lyricify.Backgrounds;
+using Lyricify.Backgrounds.AppleMusicInspired.Ios.WinUI;
+using Lyricify.Backgrounds.AppleMusicInspired.IosClassic.WinUI;
 using Lyricify.Backgrounds.Demo.Shared;
+using Lyricify.Backgrounds.Hosting.WinUI;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using System.ComponentModel;
 using Windows.Graphics;
-using WinUIBackground = Lyricify.Backgrounds.AppleMusicInspired.WinUI.AppleMusicInspiredBackground;
 
 namespace Lyricify.Backgrounds.Demo.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private WinUIBackground? preview;
+    private readonly DispatcherQueueTimer rebuildTimer;
+    private WinUIBackgroundInstance? preview;
     private byte[]? artwork;
+    private string artworkId = string.Empty;
 
     public MainWindow()
     {
         InitializeComponent();
         Title = "Lyricify Backgrounds Demo · WinUI";
+        rebuildTimer = DispatcherQueue.CreateTimer();
+        rebuildTimer.Interval = TimeSpan.FromMilliseconds(180);
+        rebuildTimer.Tick += (_, _) =>
+        {
+            rebuildTimer.Stop();
+            RebuildPreview();
+        };
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-        Closed += (_, _) => preview?.Dispose();
+        Closed += (_, _) => DisposePreview();
         RebuildPreview();
+        _ = LoadStartupArtworkAsync();
     }
 
     public DemoBackgroundViewModel ViewModel { get; } = new();
@@ -40,46 +53,70 @@ public sealed partial class MainWindow : Window
     {
         if (e.PropertyName is nameof(DemoBackgroundViewModel.Status) or nameof(DemoBackgroundViewModel.ArtworkUrl))
             return;
-        if (e.PropertyName == nameof(DemoBackgroundViewModel.SelectedPresetIndex))
+
+        if (e.PropertyName is nameof(DemoBackgroundViewModel.IsPlaying)
+            or nameof(DemoBackgroundViewModel.IsVertical)
+            or nameof(DemoBackgroundViewModel.IsLightTheme)
+            or nameof(DemoBackgroundViewModel.IsBehindLyrics))
         {
-            preview?.SetPreset(ViewModel.SelectedPresetIndex - 1);
+            ApplyState();
             return;
         }
-        ApplyState();
+
+        rebuildTimer.Stop();
+        rebuildTimer.Start();
     }
 
     private void RebuildPreview()
     {
-        preview?.Dispose();
-        PreviewHost.Children.Clear();
-        preview = new WinUIBackground(ViewModel.Settings, ViewModel.SelectedPresetIndex - 1);
-        preview.FirstFramePresented += (_, _) => SetStatus("The shared HLSL renderer is active.");
-        preview.Faulted += (_, e) => SetStatus(e.Exception.Message);
-        PreviewHost.Children.Add(preview);
+        DisposePreview();
+        var catalog = new WinUIBackgroundCatalog(
+        [
+            new AppleMusicIosWinUIBackgroundFactory(ViewModel.SelectedPresetIndex - 1),
+            new AppleMusicIosClassicWinUIBackgroundFactory(ViewModel.SelectedPresetIndex - 1),
+        ]);
+        preview = catalog.Create(ViewModel.SelectedBackgroundId, ViewModel.Settings);
+        preview.Session.FirstFramePresented += Preview_FirstFramePresented;
+        preview.Session.Faulted += Preview_Faulted;
+        PreviewHost.Children.Add(preview.View);
         ApplyState();
-        if (artwork != null) _ = preview.SetArtworkAsync(artwork);
+        _ = ApplyArtworkAsync();
     }
 
-    private void ApplyState()
+    private void ApplyState() => preview?.Session.UpdateState(new BackgroundState
     {
-        preview?.ApplySettings(ViewModel.Settings);
-        preview?.UpdateState(new BackgroundState
-        {
-            IsPlaying = ViewModel.IsPlaying,
-            IsVertical = ViewModel.IsVertical,
-            IsLightTheme = ViewModel.IsLightTheme,
-            IsBehindLyrics = ViewModel.IsBehindLyrics,
-            IsVisible = true,
-        });
+        IsPlaying = ViewModel.IsPlaying,
+        IsVertical = ViewModel.IsVertical,
+        IsLightTheme = ViewModel.IsLightTheme,
+        IsBehindLyrics = ViewModel.IsBehindLyrics,
+        IsVisible = true,
+    });
+
+    private void DisposePreview()
+    {
+        rebuildTimer.Stop();
+        if (preview == null) return;
+        preview.Session.FirstFramePresented -= Preview_FirstFramePresented;
+        preview.Session.Faulted -= Preview_Faulted;
+        PreviewHost.Children.Remove(preview.View);
+        preview.Dispose();
+        preview = null;
     }
+
+    private void Preview_FirstFramePresented(object? sender, EventArgs e) =>
+        SetStatus("The shared HLSL renderer is active.");
+
+    private void Preview_Faulted(object? sender, BackgroundFaultedEventArgs e) =>
+        SetStatus(e.Exception.Message);
 
     private async void LoadUrl_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            artwork = await AppleMusicInspiredArtworkLoader.LoadFromUriAsync(new Uri(ArtworkUrlBox.Text));
+            artwork = await DemoArtworkLoader.LoadFromUriAsync(new Uri(ArtworkUrlBox.Text));
+            artworkId = ArtworkUrlBox.Text;
             SetStatus("Artwork bytes loaded.");
-            if (preview != null) await preview.SetArtworkAsync(artwork);
+            await ApplyArtworkAsync();
             SetStatus("Artwork loaded.");
         }
         catch (Exception ex) { SetStatus(ex.Message); }
@@ -96,19 +133,44 @@ public sealed partial class MainWindow : Window
             WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
             global::Windows.Storage.StorageFile file = await picker.PickSingleFileAsync();
             if (file == null) return;
-            artwork = await AppleMusicInspiredArtworkLoader.LoadFromFileAsync(file.Path);
+            artwork = await DemoArtworkLoader.LoadFromFileAsync(file.Path);
+            artworkId = file.Path;
             SetStatus("Artwork bytes loaded.");
-            if (preview != null) await preview.SetArtworkAsync(artwork);
+            await ApplyArtworkAsync();
             SetStatus("Artwork loaded.");
         }
         catch (Exception ex) { SetStatus(ex.Message); }
     }
 
-    private void Reset_Click(object sender, RoutedEventArgs e)
+    private async Task ApplyArtworkAsync()
     {
-        ViewModel.Reset();
-        ApplyState();
+        WinUIBackgroundInstance? target = preview;
+        if (artwork == null || target == null) return;
+        await target.Session.SetArtworkAsync(new BackgroundArtwork(artworkId, artwork));
     }
+
+    private async Task LoadStartupArtworkAsync()
+    {
+        string? path = GetCommandLineValue("--artwork=");
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            artwork = await DemoArtworkLoader.LoadFromFileAsync(path);
+            artworkId = path;
+            await ApplyArtworkAsync();
+            SetStatus("Artwork loaded.");
+        }
+        catch (Exception exception)
+        {
+            SetStatus(exception.Message);
+        }
+    }
+
+    private static string? GetCommandLineValue(string prefix) =>
+        Environment.GetCommandLineArgs()
+            .FirstOrDefault(argument => argument.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))?[prefix.Length..];
+
+    private void Reset_Click(object sender, RoutedEventArgs e) => ViewModel.Reset();
 
     private void SetStatus(string value)
     {

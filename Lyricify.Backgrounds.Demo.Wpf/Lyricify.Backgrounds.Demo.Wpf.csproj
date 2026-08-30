@@ -10,7 +10,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lyricify.Backgrounds.Demo.Shared\Lyricify.Backgrounds.Demo.Shared.csproj" />
-    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Wpf\Lyricify.Backgrounds.AppleMusicInspired.Wpf.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.Hosting.Wpf\Lyricify.Backgrounds.Hosting.Wpf.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Ios.Wpf\Lyricify.Backgrounds.AppleMusicInspired.Ios.Wpf.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf.csproj" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 </Project>

@@ -1,32 +1,28 @@
-using Lyricify.Backgrounds.AppleMusicInspired.Rendering;
-using Lyricify.Backgrounds.Hosting.Wpf;
+using Lyricify.Backgrounds.AppleMusicInspired.Ios;
+using Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared.Rendering;
+using Lyricify.Backgrounds.AppleMusicInspired.Windows;
+using Lyricify.Backgrounds.AppleMusicInspired.Windows.Rendering;
 using SharpGen.Runtime;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Interop;
-using System.Windows.Media;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
-using Vortice.Direct3D9;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using DrawingPixelFormat = System.Drawing.Imaging.PixelFormat;
 using Format = Vortice.DXGI.Format;
 
 #nullable disable
-namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
+namespace Lyricify.Backgrounds.AppleMusicInspired.Ios.WinUI
 {
     /// <summary>
     /// Direct3D renderer for the animated background material.
     /// </summary>
-    public sealed class AppleMusicInspiredBackground : Grid
+    internal sealed class AppleMusicIosRenderer : IDisposable
     {
         private const double ArtworkTransitionSeconds = 0.5;
         private const double LyricsModeTransitionSeconds = 0.25;
@@ -39,18 +35,17 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         private const float PortraitTextureScale = 1f;
         private const float LandscapeTextureScale = 0.8f;
         private const string ShaderResourceName =
-            "Lyricify.Backgrounds.AppleMusicInspired.Resources.AppleMusicInspiredBackground.hlsl";
+            "Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared.Resources.AppleMusicIosBackground.hlsl";
 
-        private readonly System.Windows.Controls.Image _image;
         private readonly Stopwatch _animationClock = new();
-        private readonly AppleMusicInspiredBackgroundSettings _settings;
+        private readonly AppleMusicIosBackgroundSettings _settings;
         private readonly Func<bool> _isPlayingProvider;
-        private readonly double _renderScale;
-        private readonly long _minimumRenderIntervalTicks;
-        private readonly bool _refreshDisabled;
+        private double _renderScale;
+        private long _minimumRenderIntervalTicks;
+        private bool _refreshDisabled;
         private readonly bool _lightTheme;
-        private readonly IntPtr _compositionWindowHandle;
         private readonly Action _firstCompositionFramePresented;
+        private readonly SwapChainPanelPresenter _compositionPresenter;
         private readonly Func<string, Task<Bitmap>> _artworkLoader;
         private AppleMusicPinchVertex[] _meshVertices;
         private ushort[] _meshIndices;
@@ -58,17 +53,14 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
 
         private bool _isVerticalLayout = true;
 
-        private D3DImage _d3DImage;
-        private double _d3DImageDpiX = 96d;
-        private double _d3DImageDpiY = 96d;
         private bool _presentationVisible = true;
+        private bool _isActive;
         private bool _isBehindLyrics;
         private bool _lyricsModeTransitioning;
         private float _lyricsModeMix;
         private float _lyricsModeMixFrom;
         private float _lyricsModeMixTo;
         private double _lyricsModeTransitionStartTime;
-        private bool _renderingHooked;
         private bool _reloading;
         private bool _forceNextRender = true;
         private bool _deviceRecoveryPending;
@@ -87,10 +79,10 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
 
         private ID3D11Device _device;
         private ID3D11DeviceContext _context;
-        private CompositionSwapChainPresenter _compositionPresenter;
-        private IDirect3D9Ex _direct3D9;
-        private IDirect3DDevice9Ex _device9;
-        private IDirect3DTexture9 _sharedTexture9;
+        private double _logicalWidth;
+        private double _logicalHeight;
+        private double _compositionScaleX = 1d;
+        private double _compositionScaleY = 1d;
 
         private RenderSurface _rotationSurface;
         private RenderSurface _horizontalBlurSurface;
@@ -122,11 +114,11 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         private ID3D11SamplerState _linearZeroBorderSampler;
         private ID3D11RasterizerState _rasterizerState;
 
-        public AppleMusicInspiredBackground(
-            AppleMusicInspiredBackgroundSettings settings = null,
+        public AppleMusicIosRenderer(
+            AppleMusicIosBackgroundSettings settings = null,
             bool lightTheme = false,
             Func<bool> isPlayingProvider = null,
-            IntPtr compositionWindowHandle = default,
+            SwapChainPanelPresenter compositionPresenter = null,
             Action firstCompositionFramePresented = null,
             Func<int> deviceLatencyProvider = null,
             Func<string, Task<Bitmap>> artworkLoader = null,
@@ -135,7 +127,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         {
             _settings = settings ?? new();
             _isPlayingProvider = isPlayingProvider;
-            _compositionWindowHandle = compositionWindowHandle;
+            _compositionPresenter = compositionPresenter
+                ?? throw new ArgumentNullException(nameof(compositionPresenter));
             _firstCompositionFramePresented = firstCompositionFramePresented;
             _artworkLoader = artworkLoader;
             _spectrumAnalysis = new AppleMusicSpectrumAnalysis(
@@ -143,16 +136,16 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 audioEndpointIdProvider);
             if (presetSlot < 0)
             {
-                PresetIndex = AppleMusicInspiredMesh.SelectPreset();
-                LandscapePresetIndex = AppleMusicInspiredMesh.SelectLandscapePreset();
+                PresetIndex = AppleMusicIosMesh.SelectPreset();
+                LandscapePresetIndex = AppleMusicIosMesh.SelectLandscapePreset();
             }
             else
             {
                 int resolvedSlot = Math.Clamp(
                     presetSlot,
                     0,
-                    AppleMusicInspiredMesh.PresetSlotCount - 1);
-                PresetIndex = AppleMusicInspiredMesh.ResolvePortraitPreset(resolvedSlot);
+                    AppleMusicIosMesh.PresetSlotCount - 1);
+                PresetIndex = AppleMusicIosMesh.ResolvePortraitPreset(resolvedSlot);
                 LandscapePresetIndex = resolvedSlot;
             }
             (_meshVertices, _meshIndices) = CreateMesh(_isVerticalLayout);
@@ -169,27 +162,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 ? Math.Max(1, Stopwatch.Frequency / (long)effectiveFrameRate.Value)
                 : 0;
 
-            ClipToBounds = true;
-            Background = System.Windows.Media.Brushes.Black;
-            IsHitTestVisible = false;
-
-            _d3DImage = new D3DImage();
-            _d3DImage.IsFrontBufferAvailableChanged += OnFrontBufferAvailableChanged;
-            _image = new System.Windows.Controls.Image
-            {
-                Source = _d3DImage,
-                Stretch = Stretch.Fill,
-                SnapsToDevicePixels = true,
-                UseLayoutRounding = true,
-                IsHitTestVisible = false,
-            };
-            RenderOptions.SetBitmapScalingMode(_image, BitmapScalingMode.HighQuality);
-            Children.Add(_image);
-
-            Loaded += OnLoaded;
-            Unloaded += OnUnloaded;
-            SizeChanged += OnSizeChanged;
-            IsVisibleChanged += OnIsVisibleChanged;
         }
 
         public int PresetIndex { get; }
@@ -199,7 +171,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         private (AppleMusicPinchVertex[] Vertices, ushort[] Indices) CreateMesh(
             bool isVerticalLayout)
         {
-            return AppleMusicInspiredMesh.Create(
+            return AppleMusicIosMesh.Create(
                 isVerticalLayout ? PresetIndex : LandscapePresetIndex,
                 isVerticalLayout,
                 isVerticalLayout
@@ -241,14 +213,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             try
             {
                 ArtworkData artwork = await Task.Run(() => ArtworkData.FromBitmap(source));
-                if (!Dispatcher.CheckAccess())
-                {
-                    await Dispatcher.InvokeAsync(() => ApplyArtwork(artwork, generation));
-                }
-                else
-                {
-                    ApplyArtwork(artwork, generation);
-                }
+                ApplyArtwork(artwork, generation);
             }
             catch (Exception ex)
             {
@@ -274,7 +239,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
 
             _forceNextRender = true;
             _nextRenderTimestamp = 0;
-            if (IsLoaded)
+            if (_isActive)
             {
                 try
                 {
@@ -289,7 +254,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     QueueDeviceRecovery(ex);
                 }
             }
-            InvalidateVisual();
         }
 
         public void SetPresentationVisible(bool visible)
@@ -302,15 +266,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             _presentationVisible = visible;
             _forceNextRender = true;
             _nextRenderTimestamp = 0;
-            if (visible && IsLoaded && IsVisible)
-            {
-                HookRendering();
-                InvalidateVisual();
-            }
-            else
-            {
-                UnhookRendering();
-            }
         }
 
         /// <summary>
@@ -355,7 +310,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
 
             _forceNextRender = true;
             _nextRenderTimestamp = 0;
-            InvalidateVisual();
         }
 
         private async Task LoadArtworkAsync(string url, int generation)
@@ -372,14 +326,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 }
 
                 ArtworkData artwork = ArtworkData.FromBitmap(bitmap);
-                if (!Dispatcher.CheckAccess())
-                {
-                    await Dispatcher.InvokeAsync(() => ApplyArtwork(artwork, generation));
-                }
-                else
-                {
-                    ApplyArtwork(artwork, generation);
-                }
+                ApplyArtwork(artwork, generation);
             }
             catch (Exception ex)
             {
@@ -425,11 +372,49 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
 
             _forceNextRender = true;
             _nextRenderTimestamp = 0;
-            InvalidateVisual();
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        public void ApplySettings(bool recreateMesh)
         {
+            double renderScale = _settings.RenderScale;
+            _renderScale = double.IsFinite(renderScale) && renderScale > 0
+                ? Math.Clamp(renderScale, 0.125d, 1d)
+                : 1d;
+
+            int? frameRateLimit = _settings.FrameRateLimit;
+            _refreshDisabled = frameRateLimit == 0;
+            int? effectiveFrameRate = frameRateLimit < 0 ? 60 : frameRateLimit;
+            _minimumRenderIntervalTicks = effectiveFrameRate > 0
+                ? Math.Max(1, Stopwatch.Frequency / (long)effectiveFrameRate.Value)
+                : 0;
+
+            if (recreateMesh)
+            {
+                (_meshVertices, _meshIndices) = CreateMesh(_isVerticalLayout);
+            }
+
+            _forceNextRender = true;
+            _nextRenderTimestamp = 0;
+            if (!_isActive) return;
+
+            try
+            {
+                if (recreateMesh)
+                {
+                    RecreatePinchMeshBuffers();
+                }
+                EnsureSurfaceSize();
+            }
+            catch (Exception ex)
+            {
+                QueueDeviceRecovery(ex);
+            }
+        }
+
+        public void Initialize()
+        {
+            if (_isActive) return;
+            _isActive = true;
             try
             {
                 if (_device == null)
@@ -445,108 +430,38 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 QueueDeviceRecovery(ex);
             }
 
-            if (_presentationVisible && IsVisible)
-            {
-                HookRendering();
-            }
             if (!_refreshDisabled)
             {
                 _spectrumAnalysis.Start();
             }
+            _animationClock.Start();
             _forceNextRender = true;
         }
 
-        private void OnUnloaded(object sender, RoutedEventArgs e)
+        public void Resize(
+            double logicalWidth,
+            double logicalHeight,
+            double compositionScaleX,
+            double compositionScaleY)
         {
-            UnhookRendering();
-            _spectrumAnalysis.Stop();
-            ReleaseDirectXResources();
-            _deviceRecoveryPending = false;
+            _logicalWidth = Math.Max(0d, logicalWidth);
+            _logicalHeight = Math.Max(0d, logicalHeight);
+            _compositionScaleX = Math.Max(0.001d, compositionScaleX);
+            _compositionScaleY = Math.Max(0.001d, compositionScaleY);
+            _forceNextRender = true;
+            if (_isActive && _device != null) EnsureSurfaceSize();
         }
 
-        private void OnSizeChanged(object sender, SizeChangedEventArgs e)
+        public void Render()
         {
-            if (!IsLoaded || _device == null || ActualWidth <= 0 || ActualHeight <= 0)
-            {
-                return;
-            }
-
-            try
-            {
-                EnsureSurfaceSize();
-            }
-            catch (Exception ex)
-            {
-                QueueDeviceRecovery(ex);
-            }
-        }
-
-        private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-        {
-            if (IsVisible && IsLoaded && _presentationVisible)
-            {
-                HookRendering();
-                _forceNextRender = true;
-            }
-            else
-            {
-                UnhookRendering();
-            }
-        }
-
-        private void OnFrontBufferAvailableChanged(
-            object sender,
-            DependencyPropertyChangedEventArgs e)
-        {
-            if (!IsLoaded || _reloading || !ReferenceEquals(sender, _d3DImage) ||
-                !_d3DImage.IsFrontBufferAvailable || _sharedTexture9 == null)
-            {
-                return;
-            }
-
-            try
-            {
-                AttachBackBuffer(_d3DImage, _sharedTexture9);
-                _forceNextRender = true;
-            }
-            catch (Exception ex)
-            {
-                QueueDeviceRecovery(ex);
-            }
-        }
-
-        private void HookRendering()
-        {
-            if (_renderingHooked)
-            {
-                return;
-            }
-            _animationClock.Start();
-            CompositionTarget.Rendering += OnRendering;
-            _renderingHooked = true;
-        }
-
-        private void UnhookRendering()
-        {
-            if (!_renderingHooked)
-            {
-                return;
-            }
-            CompositionTarget.Rendering -= OnRendering;
-            _renderingHooked = false;
-            _animationClock.Stop();
-        }
-
-        private void OnRendering(object sender, EventArgs e)
-        {
-            if (_reloading || !IsLoaded || !IsVisible || !_presentationVisible)
+            if (_reloading || !_isActive || !_presentationVisible)
             {
                 return;
             }
 
             if (_deviceRecoveryPending)
             {
-                ScheduleDeviceRecovery();
+                TryRecoverDevice();
                 return;
             }
 
@@ -560,8 +475,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 return;
             }
 
-            if ((_compositionPresenter == null && !_d3DImage.IsFrontBufferAvailable) ||
-                _device == null || _context == null || _outputSurface == null ||
+            if (_device == null || _context == null || _outputSurface == null ||
                 _currentArtwork == null || _frameConstantBuffer == null)
             {
                 return;
@@ -660,15 +574,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 RotationScale = GetSettingScale(_settings.RotationScale),
             };
 
-            bool imageLocked = false;
             try
             {
-                if (_compositionPresenter == null)
-                {
-                    _d3DImage.Lock();
-                    imageLocked = true;
-                }
-
                 BindConstantBuffer();
                 BindSampler();
                 _context.RSSetState(_rasterizerState);
@@ -716,30 +623,10 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     removedReason.CheckError();
                 }
 
-                if (_compositionPresenter != null)
-                {
-                    _compositionPresenter.Present(_context, _outputSurface.Texture);
-                }
-                else
-                {
-                    _d3DImage.AddDirtyRect(new Int32Rect(
-                        0,
-                        0,
-                        _outputSurface.Width,
-                        _outputSurface.Height));
-                }
+                _compositionPresenter.Present(_context, _outputSurface.Texture);
             }
             finally
             {
-                if (imageLocked)
-                {
-                    _d3DImage.Unlock();
-                }
-            }
-
-            if (_compositionPresenter == null)
-            {
-                _image.InvalidateVisual();
             }
         }
 
@@ -779,7 +666,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 return _lyricsModeMix;
             }
 
-            float easedProgress = EvaluateUIKitEaseInOut(Math.Clamp(progress, 0f, 1f));
+            float easedProgress = EvaluateStandardEaseInOut(Math.Clamp(progress, 0f, 1f));
             _lyricsModeMix = Lerp(
                 _lyricsModeMixFrom,
                 _lyricsModeMixTo,
@@ -788,7 +675,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         }
 
         // Standard ease-in-out timing curve.
-        private static float EvaluateUIKitEaseInOut(float progress)
+        private static float EvaluateStandardEaseInOut(float progress)
         {
             if (progress <= 0f || progress >= 1f)
             {
@@ -968,34 +855,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 out ID3D11Device device);
             _device = device;
             _context = device.ImmediateContext;
-
-            if (_compositionWindowHandle != IntPtr.Zero)
-            {
-                _compositionPresenter = new CompositionSwapChainPresenter(
-                    device,
-                    _compositionWindowHandle,
-                    _firstCompositionFramePresented);
-            }
-
-            if (_compositionPresenter == null)
-            {
-                var presentParameters = new Vortice.Direct3D9.PresentParameters
-                {
-                    Windowed = true,
-                    SwapEffect = Vortice.Direct3D9.SwapEffect.Discard,
-                    DeviceWindowHandle = GetDesktopWindow(),
-                    PresentationInterval = PresentInterval.Default,
-                };
-                _direct3D9 = D3D9.Direct3DCreate9Ex();
-                _device9 = _direct3D9.CreateDeviceEx(
-                    0,
-                    DeviceType.Hardware,
-                    IntPtr.Zero,
-                    CreateFlags.HardwareVertexProcessing |
-                    CreateFlags.Multithreaded |
-                    CreateFlags.FpuPreserve,
-                    presentParameters);
-            }
+            _compositionPresenter.Initialize(device);
 
             CreatePipelineResources();
             RecreateArtworkTextures();
@@ -1206,30 +1066,25 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             }
         }
 
-        private (int Width, int Height) GetPhysicalPixelSize(DpiScale dpi)
+        private (int Width, int Height) GetPhysicalPixelSize()
         {
             return (
                 Math.Max(1, (int)Math.Round(
-                    ActualWidth * dpi.DpiScaleX * _renderScale,
+                    _logicalWidth * _compositionScaleX * _renderScale,
                     MidpointRounding.AwayFromZero)),
                 Math.Max(1, (int)Math.Round(
-                    ActualHeight * dpi.DpiScaleY * _renderScale,
+                    _logicalHeight * _compositionScaleY * _renderScale,
                     MidpointRounding.AwayFromZero)));
         }
 
         private void EnsureSurfaceSize()
         {
-            if (_device == null || ActualWidth <= 0 || ActualHeight <= 0)
+            if (_device == null || _logicalWidth <= 0 || _logicalHeight <= 0)
             {
                 return;
             }
 
-            DpiScale dpi = VisualTreeHelper.GetDpi(this);
-            if (_compositionPresenter == null)
-            {
-                EnsureD3DImageDpi(dpi);
-            }
-            var size = GetPhysicalPixelSize(dpi);
+            var size = GetPhysicalPixelSize();
             if (_outputSurface != null &&
                 _outputSurface.Width == size.Width &&
                 _outputSurface.Height == size.Height)
@@ -1239,33 +1094,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             CreateRenderSurfaces(size.Width, size.Height);
         }
 
-        private void EnsureD3DImageDpi(DpiScale dpi)
-        {
-            double dpiX = dpi.PixelsPerInchX * _renderScale;
-            double dpiY = dpi.PixelsPerInchY * _renderScale;
-            if (Math.Abs(_d3DImageDpiX - dpiX) < 0.01 &&
-                Math.Abs(_d3DImageDpiY - dpiY) < 0.01)
-            {
-                return;
-            }
-
-            D3DImage previousImage = _d3DImage;
-            var replacement = new D3DImage(dpiX, dpiY);
-            replacement.IsFrontBufferAvailableChanged += OnFrontBufferAvailableChanged;
-            if (_sharedTexture9 != null)
-            {
-                AttachBackBuffer(replacement, _sharedTexture9);
-            }
-
-            _d3DImage = replacement;
-            _image.Source = replacement;
-            _d3DImageDpiX = dpiX;
-            _d3DImageDpiY = dpiY;
-            previousImage.IsFrontBufferAvailableChanged -= OnFrontBufferAvailableChanged;
-            TryDetachBackBuffer(previousImage);
-            _forceNextRender = true;
-        }
-
         private void CreateRenderSurfaces(int width, int height)
         {
             RenderSurface newRotation = null;
@@ -1273,7 +1101,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             RenderSurface newVerticalBlur = null;
             RenderSurface newOrdinaryBlur = null;
             RenderSurface newOutput = null;
-            IDirect3DTexture9 newSharedTexture9 = null;
             _reloading = true;
             try
             {
@@ -1310,58 +1137,33 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     backdropHeight,
                     Format.R16G16B16A16_Float,
                     true);
-                bool usesComposition = _compositionPresenter != null;
                 newOutput = CreateSurface(
                     width,
                     height,
                     Format.B8G8R8A8_UNorm,
-                    false,
-                    !usesComposition);
-
-                if (usesComposition)
-                {
-                    DpiScale dpi = VisualTreeHelper.GetDpi(this);
-                    _compositionPresenter.EnsureSize(
-                        width,
-                        height,
-                        (float)(ActualWidth * dpi.DpiScaleX / width),
-                        (float)(ActualHeight * dpi.DpiScaleY / height));
-                }
-                else
-                {
-                    IntPtr handle = GetSharedHandle(newOutput.Texture);
-                    newSharedTexture9 = _device9.CreateTexture(
-                        width,
-                        height,
-                        1,
-                        Vortice.Direct3D9.Usage.RenderTarget,
-                        Vortice.Direct3D9.Format.A8R8G8B8,
-                        Pool.Default,
-                        ref handle);
-                    AttachBackBuffer(_d3DImage, newSharedTexture9);
-                }
+                    false);
+                _compositionPresenter.EnsureSize(
+                    width,
+                    height,
+                    (float)(width / _logicalWidth),
+                    (float)(height / _logicalHeight));
 
                 RenderSurface oldRotation = _rotationSurface;
                 RenderSurface oldHorizontalBlur = _horizontalBlurSurface;
                 RenderSurface oldVerticalBlur = _verticalBlurSurface;
                 RenderSurface oldOrdinaryBlur = _ordinaryBlurSurface;
                 RenderSurface oldOutput = _outputSurface;
-                IDirect3DTexture9 oldSharedTexture9 = _sharedTexture9;
 
                 _rotationSurface = newRotation;
                 _horizontalBlurSurface = newHorizontalBlur;
                 _verticalBlurSurface = newVerticalBlur;
                 _ordinaryBlurSurface = newOrdinaryBlur;
                 _outputSurface = newOutput;
-                _sharedTexture9 = newSharedTexture9;
                 newRotation = null;
                 newHorizontalBlur = null;
                 newVerticalBlur = null;
                 newOrdinaryBlur = null;
                 newOutput = null;
-                newSharedTexture9 = null;
-
-                oldSharedTexture9?.Dispose();
                 oldOutput?.Dispose();
                 oldOrdinaryBlur?.Dispose();
                 oldVerticalBlur?.Dispose();
@@ -1372,7 +1174,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             }
             finally
             {
-                newSharedTexture9?.Dispose();
                 newOutput?.Dispose();
                 newOrdinaryBlur?.Dispose();
                 newVerticalBlur?.Dispose();
@@ -1424,82 +1225,20 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             }
         }
 
-        private static IntPtr GetSharedHandle(ID3D11Texture2D texture)
-        {
-            using IDXGIResource resource = texture.QueryInterface<IDXGIResource>();
-            return resource.SharedHandle;
-        }
-
-        private static void AttachBackBuffer(D3DImage image, IDirect3DTexture9 texture)
-        {
-            using IDirect3DSurface9 surface = texture.GetSurfaceLevel(0);
-            image.Lock();
-            try
-            {
-                image.SetBackBuffer(
-                    D3DResourceType.IDirect3DSurface9,
-                    surface.NativePointer,
-                    enableSoftwareFallback: true);
-            }
-            finally
-            {
-                image.Unlock();
-            }
-        }
-
-        private static void TryDetachBackBuffer(D3DImage image)
-        {
-            if (image == null || image.PixelWidth <= 0)
-            {
-                return;
-            }
-            try
-            {
-                image.Lock();
-                try
-                {
-                    image.SetBackBuffer(D3DResourceType.IDirect3DSurface9, IntPtr.Zero);
-                }
-                finally
-                {
-                    image.Unlock();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-            }
-        }
-
         private void QueueDeviceRecovery(Exception exception)
         {
             Debug.WriteLine(exception);
             _deviceRecoveryPending = true;
-            ScheduleDeviceRecovery();
         }
 
-        private void ScheduleDeviceRecovery()
+        private void TryRecoverDevice()
         {
-            if (_deviceRecoveryScheduled || !IsLoaded ||
-                Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+            if (_deviceRecoveryScheduled || !_deviceRecoveryPending || !_isActive)
             {
                 return;
             }
 
             _deviceRecoveryScheduled = true;
-            _ = Dispatcher.BeginInvoke(
-                new Action(TryRecoverDevice),
-                System.Windows.Threading.DispatcherPriority.Background);
-        }
-
-        private void TryRecoverDevice()
-        {
-            _deviceRecoveryScheduled = false;
-            if (!_deviceRecoveryPending || !IsLoaded)
-            {
-                return;
-            }
-
             try
             {
                 ReleaseDirectXResources();
@@ -1521,7 +1260,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             _reloading = true;
             try
             {
-                TryDetachBackBuffer(_d3DImage);
                 try
                 {
                     _context?.ClearState();
@@ -1537,8 +1275,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 _previousArtwork?.Dispose();
                 _previousArtwork = null;
 
-                _sharedTexture9?.Dispose();
-                _sharedTexture9 = null;
                 _outputSurface?.Dispose();
                 _outputSurface = null;
                 _ordinaryBlurSurface?.Dispose();
@@ -1549,8 +1285,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 _horizontalBlurSurface = null;
                 _rotationSurface?.Dispose();
                 _rotationSurface = null;
-                _compositionPresenter?.Dispose();
-                _compositionPresenter = null;
 
                 _rasterizerState?.Dispose();
                 _rasterizerState = null;
@@ -1599,10 +1333,6 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 _rotationVertexShader?.Dispose();
                 _rotationVertexShader = null;
 
-                _device9?.Dispose();
-                _device9 = null;
-                _direct3D9?.Dispose();
-                _direct3D9 = null;
                 _context?.Dispose();
                 _context = null;
                 _device?.Dispose();
@@ -1610,6 +1340,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             }
             finally
             {
+                _deviceRecoveryScheduled = false;
                 _reloading = false;
             }
         }
@@ -1645,10 +1376,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
 
         private void WaitForFrameCompletion()
         {
-            // Flush only submits the command list; it does not guarantee that
-            // the shared D3D9 surface is complete when D3DImage unlocks it.
-            // An event query prevents WPF from copying partially rasterized
-            // tiles during expensive large-surface frames.
+            // Ensure the off-screen render target is complete before copying
+            // it into the SwapChainPanel back buffer.
             _context.End(_frameCompletionQuery);
             _context.Flush();
             while (true)
@@ -1710,7 +1439,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
 
         private static string ReadShaderSource()
         {
-            Stream stream = typeof(AppleMusicInspiredBackgroundSettings).Assembly
+            Stream stream = typeof(AppleMusicIosMesh).Assembly
                 .GetManifestResourceStream(ShaderResourceName);
             if (stream == null)
             {
@@ -1731,7 +1460,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             int result = D3DCompile(
                 sourceBytes,
                 (nuint)sourceBytes.Length,
-                "AppleMusicInspiredBackground.hlsl",
+                "AppleMusicIosBackground.hlsl",
                 IntPtr.Zero,
                 IntPtr.Zero,
                 entryPoint,
@@ -1964,7 +1693,14 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             }
         }
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetDesktopWindow();
+        public void Dispose()
+        {
+            if (!_isActive) return;
+            _isActive = false;
+            _animationClock.Stop();
+            _spectrumAnalysis.Stop();
+            ReleaseDirectXResources();
+            _deviceRecoveryPending = false;
+        }
     }
 }

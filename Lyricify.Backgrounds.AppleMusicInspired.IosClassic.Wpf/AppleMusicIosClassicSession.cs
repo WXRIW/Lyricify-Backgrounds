@@ -1,17 +1,21 @@
+using Lyricify.Backgrounds;
+using Lyricify.Backgrounds.AppleMusicInspired.IosClassic;
+using Lyricify.Backgrounds.AppleMusicInspired.Windows;
 using Lyricify.Backgrounds.Hosting.Wpf;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
+namespace Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf
 {
-    public sealed class IndependentAppleMusicInspiredBackground : FrameworkElement, IBackgroundSession
+    public class AppleMusicIosClassicBackgroundBase : FrameworkElement, IBackgroundSession
     {
-        private readonly AppleMusicInspiredBackgroundSettings settings;
-        private readonly bool lightTheme;
+        private readonly AppleMusicIosClassicBackgroundSettings settings;
+        private bool lightTheme;
         private readonly Func<int>? deviceLatencyProvider;
         private readonly Func<string, Task<Bitmap>>? artworkLoader;
         private readonly Func<string?>? audioEndpointIdProvider;
+        private readonly int presetSlot;
         private IndependentWpfBackgroundHost<BackgroundMessage>? renderHost;
         private string? artworkUrl;
         private string trackId = string.Empty;
@@ -19,21 +23,24 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         private bool isVertical;
         private bool isPlaying;
         private bool isBehindLyrics = true;
+        private bool isVisible = true;
         private bool isReady;
         private bool disposed;
 
-        public IndependentAppleMusicInspiredBackground(
-            AppleMusicInspiredBackgroundSettings? settings = null,
+        public AppleMusicIosClassicBackgroundBase(
+            AppleMusicIosClassicBackgroundSettings? settings = null,
             bool lightTheme = false,
             Func<int>? deviceLatencyProvider = null,
             Func<string, Task<Bitmap>>? artworkLoader = null,
-            Func<string?>? audioEndpointIdProvider = null)
+            Func<string?>? audioEndpointIdProvider = null,
+            int presetSlot = -1)
         {
-            this.settings = settings?.Clone() ?? new AppleMusicInspiredBackgroundSettings();
+            this.settings = settings?.Clone() ?? new AppleMusicIosClassicBackgroundSettings();
             this.lightTheme = lightTheme;
             this.deviceLatencyProvider = deviceLatencyProvider;
             this.artworkLoader = artworkLoader;
             this.audioEndpointIdProvider = audioEndpointIdProvider;
+            this.presetSlot = presetSlot;
             IsHitTestVisible = false;
             Loaded += OnLoaded;
             Unloaded += (_, _) => Dispose();
@@ -98,11 +105,29 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             });
         }
 
+        public void SetLightTheme(bool value)
+        {
+            if (lightTheme == value) return;
+            lightTheme = value;
+            Post(new BackgroundMessage { Kind = MessageKind.Theme, LightTheme = value });
+        }
+
+        public void SetPresentationVisible(bool value)
+        {
+            if (isVisible == value) return;
+            isVisible = value;
+            Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            Post(new BackgroundMessage { Kind = MessageKind.Visibility, IsVisible = value });
+        }
+
         public void UpdateState(BackgroundState state)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
             SetPlaying(state.IsPlaying);
             SetVerticalLayout(state.IsVertical);
+            SetIsBehindLyrics(state.IsBehindLyrics);
+            SetLightTheme(state.IsLightTheme);
+            SetPresentationVisible(state.IsVisible);
         }
 
         public Task SetArtworkAsync(
@@ -134,6 +159,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 IsVertical = isVertical,
                 IsPlaying = isPlaying,
                 IsBehindLyrics = isBehindLyrics,
+                IsVisible = isVisible,
                 ArtworkUrl = artworkUrl,
                 TrackId = trackId,
                 ArtworkBitmap = artworkBitmap == null ? null : new Bitmap(artworkBitmap),
@@ -146,7 +172,8 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     message,
                     deviceLatencyProvider,
                     artworkLoader,
-                    audioEndpointIdProvider),
+                    audioEndpointIdProvider,
+                    presetSlot),
                 message => message.Dispose(),
                 () => Dispatcher.BeginInvoke(new Action(() =>
                 {
@@ -188,17 +215,20 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
             Layout,
             Playback,
             BehindLyrics,
+            Theme,
+            Visibility,
             AudioEndpoint,
         }
 
         private sealed class BackgroundMessage : IDisposable
         {
             public MessageKind Kind { get; set; }
-            public AppleMusicInspiredBackgroundSettings? Settings { get; set; }
+            public AppleMusicIosClassicBackgroundSettings? Settings { get; set; }
             public bool LightTheme { get; set; }
             public bool IsVertical { get; set; }
             public bool IsPlaying { get; set; }
             public bool IsBehindLyrics { get; set; } = true;
+            public bool IsVisible { get; set; } = true;
             public string? ArtworkUrl { get; set; }
             public string TrackId { get; set; } = string.Empty;
             public Bitmap? ArtworkBitmap { get; set; }
@@ -215,7 +245,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
         private sealed class AppleMusicWorkerRenderer :
             IIndependentWpfBackgroundRenderer<BackgroundMessage>
         {
-            private readonly AppleMusicInspiredBackground renderer;
+            private readonly AppleMusicIosClassicRendererView renderer;
             private bool isPlaying;
 
             public AppleMusicWorkerRenderer(
@@ -223,10 +253,11 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                 BackgroundMessage initial,
                 Func<int>? latencyProvider,
                 Func<string, Task<Bitmap>>? artworkLoader,
-                Func<string?>? audioEndpointIdProvider)
+                Func<string?>? audioEndpointIdProvider,
+                int presetSlot)
             {
                 isPlaying = initial.IsPlaying;
-                renderer = new AppleMusicInspiredBackground(
+                renderer = new AppleMusicIosClassicRendererView(
                     initial.Settings,
                     initial.LightTheme,
                     () => isPlaying,
@@ -234,10 +265,11 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     context.FirstFramePresented,
                     latencyProvider,
                     artworkLoader,
+                    presetSlot,
                     audioEndpointIdProvider: audioEndpointIdProvider);
                 renderer.SetVerticalLayout(initial.IsVertical, false);
                 renderer.SetIsBehindLyrics(initial.IsBehindLyrics);
-                renderer.SetPresentationVisible(true);
+                renderer.SetPresentationVisible(initial.IsVisible);
                 ApplyArtwork(initial);
             }
 
@@ -252,6 +284,12 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Wpf
                     case MessageKind.Playback: isPlaying = message.IsPlaying; break;
                     case MessageKind.BehindLyrics:
                         renderer.SetIsBehindLyrics(message.IsBehindLyrics);
+                        break;
+                    case MessageKind.Theme:
+                        renderer.SetLightTheme(message.LightTheme);
+                        break;
+                    case MessageKind.Visibility:
+                        renderer.SetPresentationVisible(message.IsVisible);
                         break;
                     case MessageKind.AudioEndpoint:
                         renderer.RefreshAudioEndpoint();

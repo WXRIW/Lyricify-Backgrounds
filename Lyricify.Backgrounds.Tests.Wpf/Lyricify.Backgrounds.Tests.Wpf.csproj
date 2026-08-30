@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Lyricify.Backgrounds\Lyricify.Backgrounds.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.Hosting.Wpf\Lyricify.Backgrounds.Hosting.Wpf.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Ios.Wpf\Lyricify.Backgrounds.AppleMusicInspired.Ios.Wpf.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared\Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf.csproj" />
+    <ProjectReference Include="..\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared\Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

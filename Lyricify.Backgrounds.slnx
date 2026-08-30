@@ -2,11 +2,19 @@
   <Project Path="Lyricify.Backgrounds/Lyricify.Backgrounds.csproj" />
   <Project Path="Lyricify.Backgrounds.Hosting.Win32/Lyricify.Backgrounds.Hosting.Win32.csproj" />
   <Project Path="Lyricify.Backgrounds.Hosting.Wpf/Lyricify.Backgrounds.Hosting.Wpf.csproj" />
-  <Project Path="Lyricify.Backgrounds.AppleMusicInspired/Lyricify.Backgrounds.AppleMusicInspired.csproj" />
-  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.Wpf/Lyricify.Backgrounds.AppleMusicInspired.Wpf.csproj" />
+  <Project Path="Lyricify.Backgrounds.Hosting.WinUI/Lyricify.Backgrounds.Hosting.WinUI.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.Ios/Lyricify.Backgrounds.AppleMusicInspired.Ios.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared/Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared.csproj" />
   <Project Path="Lyricify.Backgrounds.AppleMusicInspired.Windows/Lyricify.Backgrounds.AppleMusicInspired.Windows.csproj" />
-  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.WinUI/Lyricify.Backgrounds.AppleMusicInspired.WinUI.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.Ios.Wpf/Lyricify.Backgrounds.AppleMusicInspired.Ios.Wpf.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.Ios.WinUI/Lyricify.Backgrounds.AppleMusicInspired.Ios.WinUI.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.IosClassic/Lyricify.Backgrounds.AppleMusicInspired.IosClassic.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared/Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf/Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Wpf.csproj" />
+  <Project Path="Lyricify.Backgrounds.AppleMusicInspired.IosClassic.WinUI/Lyricify.Backgrounds.AppleMusicInspired.IosClassic.WinUI.csproj" />
   <Project Path="Lyricify.Backgrounds.Demo.Shared/Lyricify.Backgrounds.Demo.Shared.csproj" />
   <Project Path="Lyricify.Backgrounds.Demo.Wpf/Lyricify.Backgrounds.Demo.Wpf.csproj" />
   <Project Path="Lyricify.Backgrounds.Demo.WinUI/Lyricify.Backgrounds.Demo.WinUI.csproj" />
+  <Project Path="Lyricify.Backgrounds.Tests.Wpf/Lyricify.Backgrounds.Tests.Wpf.csproj" />
+  <Project Path="Lyricify.Backgrounds.Tests.WinUI/Lyricify.Backgrounds.Tests.WinUI.csproj" />
 </Solution>

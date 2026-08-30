@@ -5,7 +5,7 @@ using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Format = Vortice.DXGI.Format;
 
-namespace Lyricify.Backgrounds.AppleMusicInspired.WinUI;
+namespace Lyricify.Backgrounds.AppleMusicInspired.Ios.WinUI;
 
 internal sealed class SwapChainPanelPresenter : IDisposable
 {

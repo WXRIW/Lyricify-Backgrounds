@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 
 #nullable disable
-namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
+namespace Lyricify.Backgrounds.AppleMusicInspired.IosClassic.Shared.Rendering
 {
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct AppleMusicPinchVertex
@@ -20,7 +20,7 @@ namespace Lyricify.Backgrounds.AppleMusicInspired.Rendering
         public readonly Vector2 TextureCoordinate;
     }
 
-    public static class AppleMusicInspiredMesh
+    public static class AppleMusicIosClassicMesh
     {
         public const int PresetSlotCount = 5;
         public const int MinimumControlPointCount = 2;

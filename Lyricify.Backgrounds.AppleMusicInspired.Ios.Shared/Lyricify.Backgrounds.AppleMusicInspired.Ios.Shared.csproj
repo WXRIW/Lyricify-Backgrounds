@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <PackageId>Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared</PackageId>
+    <Description>Framework-independent rendering data and shader resources for Apple Music Inspired · iOS.</Description>
+    <Authors>XY Wang</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\AppleMusicIosBackground.hlsl"
+                      LogicalName="Lyricify.Backgrounds.AppleMusicInspired.Ios.Shared.Resources.AppleMusicIosBackground.hlsl" />
+  </ItemGroup>
+</Project>
